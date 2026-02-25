@@ -29,7 +29,7 @@ const schema = z.object({
   company: z.string().optional(),
   generic_name: z.string().optional(),
   category_id: z.string().optional(),
-  unit: z.coerce.number().min(0).default(0),
+  unit: z.string().optional(),
   unit_packing: z.string().optional(),
   medicine_group: z.string().optional(),
   store_location: z.string().optional(),
@@ -55,7 +55,7 @@ export function MedicineForm({ medicine, categories }: MedicineFormProps) {
       company: medicine?.company ?? '',
       generic_name: medicine?.generic_name ?? '',
       category_id: medicine?.category_id ?? '',
-      unit: medicine?.unit ?? 0,
+      unit: medicine?.unit ?? '',
       unit_packing: medicine?.unit_packing ?? '',
       medicine_group: medicine?.medicine_group ?? '',
       store_location: medicine?.store_location ?? '',
@@ -136,7 +136,7 @@ export function MedicineForm({ medicine, categories }: MedicineFormProps) {
               <FormField control={form.control} name="unit" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Unit</FormLabel>
-                  <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                  <FormControl><Input placeholder="e.g. Tablet" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />

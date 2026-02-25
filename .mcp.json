@@ -2,7 +2,7 @@
   "mcpServers": {
     "supabase": {
       "type": "http",
-      "url": "https://mcp.supabase.com/mcp?project_ref=",
+      "url": "https://mcp.supabase.com/mcp?project_ref=jlvfbzgkwyufksmhtfan",
       "headers": {
         "Authorization": "Bearer sbp_47018305daf9755154b028eb0e599cbb8097c0c8"
       }
@@ -18,14 +18,24 @@
     },
     "memory": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-memory@latest"],
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-memory@latest"
+      ],
       "env": {
         "MEMORY_STORE_PATH": "D:\\MyJKKN\\.claude\\memory"
       }
     },
     "actor-critic-thinking": {
       "command": "cmd",
-      "args": ["/c", "npx", "-y", "mcp-server-actor-critic-thinking"]
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "mcp-server-actor-critic-thinking"
+      ]
     },
     "chrome-devtools": {
       "command": "cmd",
@@ -38,7 +48,10 @@
     },
     "next-devtools": {
       "command": "npx",
-      "args": ["-y", "next-devtools-mcp@latest"]
+      "args": [
+        "-y",
+        "next-devtools-mcp@latest"
+      ]
     }
   }
 }

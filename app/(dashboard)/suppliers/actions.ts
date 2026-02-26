@@ -53,3 +53,17 @@ export async function deleteSupplierAction(id: string) {
   revalidatePath('/suppliers')
   return { success: true }
 }
+
+export async function bulkDeleteSuppliersAction(
+  ids: string[],
+): Promise<{ deleted: number; error?: string }> {
+  if (!ids.length) return { deleted: 0 }
+  const supabase = await createClient()
+  const { error, count } = await supabase
+    .from('suppliers')
+    .delete({ count: 'exact' })
+    .in('id', ids)
+  if (error) return { deleted: 0, error: error.message }
+  revalidatePath('/suppliers')
+  return { deleted: count ?? ids.length }
+}

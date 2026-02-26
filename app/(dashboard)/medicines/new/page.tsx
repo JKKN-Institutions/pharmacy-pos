@@ -7,10 +7,10 @@ import { ChevronLeft } from 'lucide-react'
 
 export default async function NewMedicinePage() {
   const supabase = await createClient()
-  const { data: categories } = await supabase
-    .from('medicine_categories')
-    .select('id, name')
-    .order('name')
+  const [{ data: categories }, { data: taxRates }] = await Promise.all([
+    supabase.from('medicine_categories').select('id, name').order('name'),
+    supabase.from('tax_rates').select('id, name, rate').eq('is_active', true).order('rate'),
+  ])
 
   return (
     <div className="space-y-6">
@@ -19,7 +19,7 @@ export default async function NewMedicinePage() {
           <Link href="/medicines"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
         </Button>
       </PageHeader>
-      <MedicineForm categories={categories ?? []} />
+      <MedicineForm categories={categories ?? []} taxRates={taxRates ?? []} />
     </div>
   )
 }

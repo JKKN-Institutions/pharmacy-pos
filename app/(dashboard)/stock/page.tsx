@@ -1,62 +1,104 @@
 import { createClient } from '@/lib/supabase/server'
-import { DataTable } from '@/components/ui/data-table'
 import { stockColumns } from './columns'
 import { PageHeader } from '@/components/ui/page-header'
-import { Button } from '@/components/ui/button'
-import { Download } from 'lucide-react'
-import Link from 'next/link'
+import { StockDataTable } from '@/components/stock/stock-data-table'
+import { StockBulkImportButton } from '@/components/stock/stock-bulk-import-button'
+import type { StockWithMedicine } from './columns'
+
+const SORTABLE_DB_COLUMNS = [
+  'expiry_date',
+  'available_qty',
+  'sold_qty',
+  'initial_qty',
+  'purchase_price',
+  'sale_price',
+]
+
+const VALID_PAGE_SIZES = [10, 15, 25, 50]
 
 export default async function StockPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>
+  searchParams: Promise<{
+    view?:     string
+    search?:   string
+    page?:     string
+    pageSize?: string
+    sort?:     string
+    order?:    string
+  }>
 }) {
   const params = await searchParams
-  const view = params.view ?? 'live'
-  const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
 
-  let query = supabase
-    .from('stock_batches')
-    .select('*, medicines(name, company)', { count: 'exact' })
-    .order('expiry_date', { ascending: true })
+  const view      = params.view === 'expired' ? 'expired' : 'live'
+  const page      = Math.max(1, parseInt(params.page ?? '1', 10))
+  const rawPageSize = parseInt(params.pageSize ?? '15', 10)
+  const pageSize    = VALID_PAGE_SIZES.includes(rawPageSize) ? rawPageSize : 15
+  const search    = params.search?.trim() ?? ''
+  const sortCol   = SORTABLE_DB_COLUMNS.includes(params.sort ?? '') ? params.sort! : 'expiry_date'
+  const ascending = (params.order ?? 'asc') !== 'desc'
 
-  if (view === 'live') {
-    query = query.eq('status', 'active').gte('expiry_date', today)
-  } else {
-    query = query.or(`status.eq.expired,expiry_date.lt.${today}`)
+  const supabase  = await createClient()
+  const today     = new Date().toISOString().split('T')[0]
+  const rangeFrom = (page - 1) * pageSize
+  const rangeTo   = rangeFrom + pageSize - 1
+
+  // ── Optional search: resolve medicine names → IDs first ──────────────────────
+  let medicineIdFilter: string[] | null = null
+  if (search) {
+    const { data: matchingMeds } = await supabase
+      .from('medicines')
+      .select('id')
+      .ilike('name', `%${search}%`)
+    medicineIdFilter = (matchingMeds ?? []).map((m) => m.id)
   }
 
-  const { data: stock, count } = await query
+  // Short-circuit: search returned no matching medicines → empty result
+  let data: StockWithMedicine[] = []
+  let totalCount = 0
+
+  if (medicineIdFilter === null || medicineIdFilter.length > 0) {
+    let q = supabase
+      .from('stock_batches')
+      .select('*, medicines(name, company)', { count: 'exact' })
+
+    if (view === 'live') {
+      q = q.eq('status', 'active').gte('expiry_date', today)
+    } else {
+      q = q.or(`status.eq.expired,expiry_date.lt.${today}`)
+    }
+
+    if (medicineIdFilter !== null) {
+      q = q.in('medicine_id', medicineIdFilter)
+    }
+
+    const { data: rows, count } = await q
+      .order(sortCol, { ascending })
+      .range(rangeFrom, rangeTo)
+
+    data       = (rows as StockWithMedicine[]) ?? []
+    totalCount = count ?? 0
+  }
+
+  const title       = view === 'live' ? 'Live Stock' : 'Expired Stock'
+  const description = `${totalCount.toLocaleString()} batch${totalCount !== 1 ? 'es' : ''}`
 
   return (
     <div className="space-y-6">
-      <PageHeader title={view === 'live' ? 'Live Stock' : 'Expired Stock'} description={`${count ?? 0} stock batches`}>
-        <div className="flex gap-2">
-          <Button
-            variant={view === 'live' ? 'default' : 'outline'}
-            size="sm"
-            asChild
-          >
-            <Link href="/stock?view=live">Live Stock</Link>
-          </Button>
-          <Button
-            variant={view === 'expired' ? 'default' : 'outline'}
-            size="sm"
-            asChild
-          >
-            <Link href="/stock?view=expired">Expired</Link>
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="w-4 h-4 mr-2" />Export
-          </Button>
-        </div>
+      <PageHeader title={title} description={description}>
+        <StockBulkImportButton />
       </PageHeader>
-      <DataTable
+
+      <StockDataTable
         columns={stockColumns}
-        data={stock ?? []}
-        searchKey="batch_number"
-        searchPlaceholder="Search by batch no..."
+        data={data}
+        totalCount={totalCount}
+        initialPage={page}
+        initialPageSize={pageSize}
+        initialSearch={search}
+        initialView={view}
+        initialSort={sortCol}
+        initialOrder={ascending ? 'asc' : 'desc'}
       />
     </div>
   )

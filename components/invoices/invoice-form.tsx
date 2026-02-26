@@ -62,12 +62,12 @@ export function InvoiceForm({ customers }: { customers: Pick<Customer, 'id' | 'f
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'items' })
   const watchedItems = form.watch('items')
 
-  const totals = useMemo(() => {
-    const lineItems = watchedItems.map(item =>
+  const lineItems = useMemo(() =>
+    watchedItems.map(item =>
       calculateLineItem({ qty: item.qty || 0, unit_price: item.unit_cost || 0, discount_type: item.discount_type, discount_value: item.discount_value || 0, tax: item.tax || 0 })
-    )
-    return calculateBillTotals(lineItems)
-  }, [watchedItems])
+    ), [watchedItems])
+
+  const totals = useMemo(() => calculateBillTotals(lineItems), [lineItems])
 
   async function onSubmit(values: FormValues) {
     const result = await createInvoiceAction({
@@ -182,7 +182,7 @@ export function InvoiceForm({ customers }: { customers: Pick<Customer, 'id' | 'f
                 </div>
                 <div className="col-span-2">
                   <FormField control={form.control} name={`items.${index}.unit_cost`} render={({ field }) => (
-                    <FormItem><FormLabel className="text-xs">Unit Rate â¹</FormLabel><FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl></FormItem>
+                    <FormItem><FormLabel className="text-xs">Unit Rate &#8377;</FormLabel><FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl></FormItem>
                   )} />
                 </div>
                 <div className="col-span-2">
@@ -193,7 +193,7 @@ export function InvoiceForm({ customers }: { customers: Pick<Customer, 'id' | 'f
                 <div className="col-span-1 flex items-end h-full pb-0.5">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Total</p>
-                    <p className="text-sm font-semibold">{formatINR(watchedItems[index]?.price || 0)}</p>
+                    <p className="text-sm font-semibold">{formatINR(lineItems[index]?.price ?? 0)}</p>
                   </div>
                 </div>
                 <div className="col-span-1 flex items-end justify-end h-full pb-0.5">

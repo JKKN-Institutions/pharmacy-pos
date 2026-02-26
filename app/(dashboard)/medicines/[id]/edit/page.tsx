@@ -14,9 +14,10 @@ export default async function EditMedicinePage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: medicine }, { data: categories }] = await Promise.all([
+  const [{ data: medicine }, { data: categories }, { data: taxRates }] = await Promise.all([
     supabase.from('medicines').select('*').eq('id', id).single(),
     supabase.from('medicine_categories').select('id, name').order('name'),
+    supabase.from('tax_rates').select('id, name, rate').eq('is_active', true).order('rate'),
   ])
 
   if (!medicine) notFound()
@@ -28,7 +29,7 @@ export default async function EditMedicinePage({
           <Link href="/medicines"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
         </Button>
       </PageHeader>
-      <MedicineForm medicine={medicine} categories={categories ?? []} />
+      <MedicineForm medicine={medicine} categories={categories ?? []} taxRates={taxRates ?? []} />
     </div>
   )
 }

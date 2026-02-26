@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
+import { BulkImportPurchasesButton } from '@/components/purchases/bulk-import-button'
 
 export default async function PurchasesPage({
   searchParams,
@@ -27,6 +28,7 @@ export default async function PurchasesPage({
   return (
     <div className="space-y-6">
       <PageHeader title="Purchase" description={`${count ?? 0} purchases recorded`}>
+        <BulkImportPurchasesButton />
         <Button size="sm" asChild>
           <Link href="/purchases/new">
             <Plus className="w-4 h-4 mr-2" />New Purchase

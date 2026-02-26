@@ -10,6 +10,7 @@ export async function GET() {
       id,
       name,
       company,
+      tax_percent,
       stock_batches!inner(
         id,
         batch_no,

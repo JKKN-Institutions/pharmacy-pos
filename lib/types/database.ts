@@ -48,18 +48,16 @@ export interface StockBatch {
   id: string
   branch_id: string
   medicine_id: string
-  purchase_item_id: string | null
-  batch_number: string
+  purchase_id: string | null
+  batch_no: string        // real DB column name
   expiry_date: string     // ISO date string
   initial_qty: number
   sold_qty: number
   available_qty: number
   purchase_price: number
-  selling_price: number
-  mrp: number
+  sale_price: number
   status: 'active' | 'expired' | 'exhausted' | 'written_off'
   created_at: string
-  updated_at: string
 }
 
 // ─── Suppliers ────────────────────────────────────────────────────────────────
@@ -287,6 +285,18 @@ export interface MedicineCategory {
   branch_id: string
   name: string
   description: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+// ─── Tax Rates ────────────────────────────────────────────────────────────────
+
+export interface TaxRate {
+  id: string
+  branch_id: string
+  name: string
+  rate: number
   is_active: boolean
   created_at: string
   updated_at: string

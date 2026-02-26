@@ -11,5 +11,6 @@ export const medicineSchema = z.object({
   store_location: z.string().optional(),
   min_level: z.coerce.number().min(0).default(0),
   reorder_level: z.coerce.number().min(0).default(0),
+  tax_percent: z.coerce.number().min(0).max(100).default(0),
   status: z.enum(['active', 'inactive']).default('active'),
 })

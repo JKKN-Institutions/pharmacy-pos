@@ -23,11 +23,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Get branch and user for the bill
+  // Get user profile (branch_id must match get_user_branch() for RLS)
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: branch } = await supabase.from('branches').select('id').limit(1).single()
   const { data: profile } = user
-    ? await supabase.from('user_profiles').select('id').eq('auth_user_id', user.id).single()
+    ? await supabase.from('user_profiles').select('id, branch_id').eq('auth_user_id', user.id).single()
     : { data: null }
 
   // Generate bill number via DB sequence
@@ -52,7 +51,7 @@ export async function POST(req: NextRequest) {
       note: data.note ?? null,
       bill_date: data.bill_date,
       status: 'saved',
-      branch_id: branch?.id ?? null,
+      branch_id: profile?.branch_id ?? null,
       created_by: profile?.id ?? null,
     })
     .select('id, bill_no')

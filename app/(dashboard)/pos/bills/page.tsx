@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { DataTable } from '@/components/ui/data-table'
-import { billColumns } from './columns'
+import { BillsTable } from '@/components/pos/bills-table'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Receipt } from 'lucide-react'
@@ -18,13 +17,15 @@ export default async function PosBillsPage() {
 
   const billsData = bills ?? []
 
+  const completedStatuses = ['paid', 'saved']
+
   const totalRevenue = billsData
-    .filter((b) => b.status === 'paid')
+    .filter((b) => completedStatuses.includes(b.status ?? ''))
     .reduce((sum, b) => sum + (b.total ?? 0), 0)
 
   const todayStr = new Date().toISOString().slice(0, 10)
   const todayRevenue = billsData
-    .filter((b) => b.status === 'paid' && b.bill_date?.slice(0, 10) === todayStr)
+    .filter((b) => completedStatuses.includes(b.status ?? '') && b.bill_date?.slice(0, 10) === todayStr)
     .reduce((sum, b) => sum + (b.total ?? 0), 0)
 
   const pendingCount = billsData.filter((b) => b.status === 'pending').length
@@ -88,12 +89,7 @@ export default async function PosBillsPage() {
         </Card>
       </div>
 
-      <DataTable
-        columns={billColumns}
-        data={billsData}
-        searchKey="bill_no"
-        searchPlaceholder="Search by bill number..."
-      />
+      <BillsTable bills={billsData} />
     </div>
   )
 }

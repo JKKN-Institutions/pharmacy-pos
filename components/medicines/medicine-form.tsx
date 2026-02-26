@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createMedicineAction, updateMedicineAction } from '@/app/(dashboard)/medicines/actions'
-import type { Medicine, MedicineCategory } from '@/lib/types/database'
+import type { Medicine, MedicineCategory, TaxRate } from '@/lib/types/database'
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   company: z.string().optional(),
@@ -35,6 +35,7 @@ const schema = z.object({
   store_location: z.string().optional(),
   min_level: z.coerce.number().min(0).default(0),
   reorder_level: z.coerce.number().min(0).default(0),
+  tax_percent: z.coerce.number().min(0).max(100).default(0),
   status: z.enum(['active', 'inactive']).default('active'),
 })
 
@@ -43,8 +44,9 @@ type FormValues = z.infer<typeof schema>
 interface MedicineFormProps {
   medicine?: Medicine
   categories: Pick<MedicineCategory, 'id' | 'name'>[]
+  taxRates: Pick<TaxRate, 'id' | 'name' | 'rate'>[]
 }
-export function MedicineForm({ medicine, categories }: MedicineFormProps) {
+export function MedicineForm({ medicine, categories, taxRates }: MedicineFormProps) {
   const isEdit = !!medicine
 
   const form = useForm<FormValues>({
@@ -61,6 +63,7 @@ export function MedicineForm({ medicine, categories }: MedicineFormProps) {
       store_location: medicine?.store_location ?? '',
       min_level: medicine?.min_level ?? 0,
       reorder_level: medicine?.reorder_level ?? 0,
+      tax_percent: medicine?.tax_percent ?? 0,
       status: medicine?.status ?? 'active',
     },
   })
@@ -165,6 +168,30 @@ export function MedicineForm({ medicine, categories }: MedicineFormProps) {
                 <FormItem>
                   <FormLabel>Reorder Level</FormLabel>
                   <FormControl><Input type="number" min="0" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="tax_percent" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tax Rate (GST)</FormLabel>
+                  <Select
+                    onValueChange={(v) => field.onChange(parseFloat(v))}
+                    value={String(field.value)}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select tax rate" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper">
+                      <SelectItem value="0">No Tax — 0%</SelectItem>
+                      {taxRates.map(tr => (
+                        <SelectItem key={tr.id} value={String(tr.rate)}>
+                          {tr.name} — {Number(tr.rate).toFixed(2)}%
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )} />

@@ -31,6 +31,7 @@ export function BillLineItems({ items, onUpdate, onRemove }: BillLineItemsProps)
             <th className="text-center p-3 w-28">Qty</th>
             <th className="text-right p-3">Price</th>
             <th className="text-right p-3">Discount%</th>
+            <th className="text-right p-3">Tax%</th>
             <th className="text-right p-3">Total</th>
             <th className="p-3 w-10"></th>
           </tr>
@@ -82,6 +83,9 @@ export function BillLineItems({ items, onUpdate, onRemove }: BillLineItemsProps)
                   onChange={e => onUpdate(item.id, { discount_value: parseFloat(e.target.value) || 0 })}
                   className="h-7 w-16 text-right px-1 ml-auto"
                 />
+              </td>
+              <td className="p-3 text-right text-muted-foreground">
+                {item.tax > 0 ? `${item.tax}%` : '—'}
               </td>
               <td className="p-3 text-right font-semibold">{formatINR(item.price)}</td>
               <td className="p-3">

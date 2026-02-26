@@ -61,7 +61,7 @@ export function MedicineSearch({ onAddItem }: MedicineSearchProps) {
       sale_price: fefo.sale_price,
       discount_type: 'percent',
       discount_value: 0,
-      tax: 0,
+      tax: medicine.tax_percent ?? 0,
       price: fefo.sale_price,
     }
 

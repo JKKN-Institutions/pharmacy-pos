@@ -9,7 +9,8 @@ import { BillTotals } from './bill-totals'
 import { CustomerInfo } from './customer-info'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
-import { Wifi, WifiOff, RefreshCw, ShoppingCart } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, ShoppingCart, History } from 'lucide-react'
+import Link from 'next/link'
 import { calculateLineItem, calculateBillTotals } from '@/lib/utils/billing'
 import type { DiscountType } from '@/lib/types/database'
 
@@ -151,7 +152,6 @@ export function PosClient({ userId, branchId }: PosClientProps) {
         if (res.ok) {
           toast.success(`Bill ${responseData.bill_no} saved!`)
           clearBill()
-          window.print()
         } else {
           toast.error(responseData.error ?? 'Failed to save bill')
         }
@@ -206,6 +206,12 @@ export function PosClient({ userId, branchId }: PosClientProps) {
             title="Sync medicines"
           >
             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/pos/bills">
+              <History className="w-4 h-4 mr-1.5" />
+              Bill History
+            </Link>
           </Button>
         </div>
       </div>

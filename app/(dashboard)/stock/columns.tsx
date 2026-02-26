@@ -1,25 +1,27 @@
 'use client'
 
 import { ColumnDef } from '@tanstack/react-table'
+import { ArrowUpDown } from 'lucide-react'
 import { format, differenceInDays } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { formatINR } from '@/lib/utils/currency'
-import { ConfirmDialog } from '@/components/ui/confirm-dialog'
-import { writeOffStockAction } from './actions'
-import { toast } from 'sonner'
 import type { StockBatch } from '@/lib/types/database'
 
-type StockWithMedicine = StockBatch & { medicines?: { name: string; company: string | null } }
+export type StockWithMedicine = StockBatch & {
+  medicines?: { name: string; company: string | null }
+}
 
 function ExpiryBadge({ date }: { date: string }) {
   const days = differenceInDays(new Date(date), new Date())
   return (
-    <span className={cn(
-      'text-sm font-medium',
-      days < 0 && 'text-red-600 dark:text-red-400',
-      days >= 0 && days <= 30 && 'text-amber-600 dark:text-amber-400',
-      days > 30 && 'text-foreground'
-    )}>
+    <span
+      className={cn(
+        'text-sm font-medium',
+        days < 0 && 'text-red-600 dark:text-red-400',
+        days >= 0 && days <= 30 && 'text-amber-600 dark:text-amber-400',
+        days > 30 && 'text-foreground',
+      )}
+    >
       {format(new Date(date), 'dd MMM yyyy')}
       {days < 0 && ' (Expired)'}
       {days >= 0 && days <= 30 && ` (${days}d left)`}
@@ -27,79 +29,118 @@ function ExpiryBadge({ date }: { date: string }) {
   )
 }
 
+function SortHeader({ label, column }: { label: string; column: import('@tanstack/react-table').Column<StockWithMedicine> }) {
+  return (
+    <button
+      className="flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+    >
+      {label}
+      <ArrowUpDown className="h-3.5 w-3.5 opacity-60" />
+    </button>
+  )
+}
+
 export const stockColumns: ColumnDef<StockWithMedicine>[] = [
+  // ── # ────────────────────────────────────────────────────────────────────────
   {
-    id: 'medicine',
-    header: 'Medicine',
+    id: 'row_number',
+    header: '#',
     cell: ({ row }) => (
-      <div>
-        <div className="font-medium">{row.original.medicines?.name ?? '—'}</div>
+      <span className="text-xs text-muted-foreground tabular-nums">{row.index + 1}</span>
+    ),
+    enableSorting: false,
+    enableHiding: false,
+  },
+
+  // ── Name ─────────────────────────────────────────────────────────────────────
+  {
+    id: 'name',
+    accessorFn: (row) => row.medicines?.name ?? '',
+    header: 'Name',
+    cell: ({ row }) => (
+      <div className="max-w-[220px]">
+        <div className="font-medium text-sm truncate" title={row.original.medicines?.name ?? undefined}>
+          {row.original.medicines?.name ?? '—'}
+        </div>
         {row.original.medicines?.company && (
-          <div className="text-xs text-muted-foreground">{row.original.medicines.company}</div>
+          <div className="text-xs text-muted-foreground truncate">{row.original.medicines.company}</div>
         )}
       </div>
     ),
+    enableSorting: false,
   },
+
+  // ── Batch ────────────────────────────────────────────────────────────────────
   {
-    accessorKey: 'batch_number',
-    header: 'Batch No.',
-    cell: ({ row }) => <div className="font-mono text-sm">{row.getValue('batch_number')}</div>,
+    accessorKey: 'batch_no',
+    header: 'Batch',
+    cell: ({ row }) => (
+      <span className="font-mono text-sm">{row.getValue('batch_no')}</span>
+    ),
+    enableSorting: false,
   },
+
+  // ── Expiry ───────────────────────────────────────────────────────────────────
   {
     accessorKey: 'expiry_date',
-    header: 'Expiry Date',
+    header: ({ column }) => <SortHeader label="Expiry" column={column} />,
     cell: ({ row }) => <ExpiryBadge date={row.getValue('expiry_date')} />,
   },
+
+  // ── Purchase Price ───────────────────────────────────────────────────────────
   {
-    accessorKey: 'available_qty',
-    header: 'Available',
-    cell: ({ row }) => <div className="font-semibold">{row.getValue('available_qty')}</div>,
+    accessorKey: 'purchase_price',
+    header: ({ column }) => <SortHeader label="Purchase Price" column={column} />,
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums">{formatINR(row.getValue('purchase_price'))}</span>
+    ),
   },
-  {
-    accessorKey: 'sold_qty',
-    header: 'Sold',
-    cell: ({ row }) => <div className="text-sm text-muted-foreground">{row.getValue('sold_qty')}</div>,
-  },
+
+  // ── Sale Price ───────────────────────────────────────────────────────────────
   {
     accessorKey: 'sale_price',
-    header: 'Sale Price',
-    cell: ({ row }) => <div className="text-sm">{formatINR(row.getValue('sale_price'))}</div>,
+    header: ({ column }) => <SortHeader label="Sale Price" column={column} />,
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums font-medium">{formatINR(row.getValue('sale_price'))}</span>
+    ),
   },
+
+  // ── Qty (initial) ─────────────────────────────────────────────────────────────
   {
-    accessorKey: 'status',
-    header: 'Status',
+    accessorKey: 'initial_qty',
+    header: ({ column }) => <SortHeader label="Qty" column={column} />,
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums">{row.getValue('initial_qty')}</span>
+    ),
+  },
+
+  // ── Sold ─────────────────────────────────────────────────────────────────────
+  {
+    accessorKey: 'sold_qty',
+    header: ({ column }) => <SortHeader label="Sold" column={column} />,
+    cell: ({ row }) => (
+      <span className="text-sm tabular-nums text-muted-foreground">{row.getValue('sold_qty')}</span>
+    ),
+  },
+
+  // ── Available ────────────────────────────────────────────────────────────────
+  {
+    accessorKey: 'available_qty',
+    header: ({ column }) => <SortHeader label="Available" column={column} />,
     cell: ({ row }) => {
-      const status = row.getValue('status') as string
-      const colors: Record<string, string> = {
-        active: 'bg-green-100 text-green-700 dark:bg-green-900/30',
-        expired: 'bg-red-100 text-red-700 dark:bg-red-900/30',
-        written_off: 'bg-gray-100 text-gray-600 dark:bg-gray-800',
-      }
+      const qty = row.getValue('available_qty') as number
       return (
-        <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize', colors[status])}>
-          {status.replace('_', ' ')}
+        <span
+          className={cn(
+            'text-sm tabular-nums font-semibold',
+            qty === 0 && 'text-red-600 dark:text-red-400',
+            qty > 0 && qty <= 10 && 'text-amber-600 dark:text-amber-400',
+            qty > 10 && 'text-emerald-600 dark:text-emerald-400',
+          )}
+        >
+          {qty}
         </span>
-      )
-    },
-  },
-  {
-    id: 'actions',
-    cell: ({ row }) => {
-      const batch = row.original
-      if (batch.status !== 'active') return null
-      return (
-        <ConfirmDialog
-          title='Write off batch?'
-          description={'Mark batch ' + batch.batch_number + ' as written off and record an expense entry.'}
-          trigger={
-            <button className="text-xs text-destructive hover:underline">Write Off</button>
-          }
-          onConfirm={async () => {
-            const result = await writeOffStockAction(batch.id, 'Manual write-off')
-            if (result?.error) toast.error(result.error)
-            else toast.success('Batch written off')
-          }}
-        />
       )
     },
   },

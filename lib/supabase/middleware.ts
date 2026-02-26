@@ -9,6 +9,15 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  const { pathname } = request.nextUrl
+
+  // Skip Supabase session refresh for public routes — prevents network errors
+  // (e.g. "Connection closed") from surfacing on the login page itself.
+  const publicRoutes = ['/login', '/auth/callback']
+  if (publicRoutes.includes(pathname)) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -34,14 +43,6 @@ export async function updateSession(request: NextRequest) {
 
   // Refresh session — do not remove this call
   const { data: { user } } = await supabase.auth.getUser()
-
-  const { pathname } = request.nextUrl
-
-  // Public routes that don't need auth
-  const publicRoutes = ['/login']
-  if (publicRoutes.includes(pathname)) {
-    return supabaseResponse
-  }
 
   // Redirect unauthenticated users to login
   if (!user) {

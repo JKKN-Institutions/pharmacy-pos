@@ -3,11 +3,13 @@ import * as XLSX from 'xlsx'
 export interface ParsedMedicineRow {
   name: string
   company: string | null
+  generic_name: string | null   // used for composite fingerprint + stored in DB
   unit: string | null
   unit_packing: string | null
   category: string | null
   store_location: string | null
   reorder_level: number
+  tax_percent: number | null    // validated against GST slabs; null if column absent
   status: 'active' | 'inactive'
   live_stock: number | null   // display-only; NOT imported into medicines table
   raw_row: number             // original sheet row index (for error messages)
@@ -113,6 +115,10 @@ export function parseMedicinesFile(
     const name = fixDuplicatedName(rawName)
     if (!name || name.length < 2) continue
 
+    // Generic name (various column spellings)
+    const generic_name =
+      r['generic name'] ?? r['generic'] ?? r['generic_name'] ?? null
+
     // Reorder level (various spellings from different exports)
     const reorderRaw =
       r['reorderlevel'] ??
@@ -120,6 +126,13 @@ export function parseMedicinesFile(
       r['reorder_level'] ??
       ''
     const reorder_level = parseInt(reorderRaw ?? '', 10)
+
+    // Tax percent — only parsed when the column is present in the file
+    const taxRaw =
+      r['tax%'] ?? r['gst%'] ?? r['tax percent'] ?? r['tax_percent'] ?? r['gst'] ?? ''
+    const tax_percent = taxRaw
+      ? isNaN(parseFloat(taxRaw)) ? null : parseFloat(taxRaw)
+      : null
 
     // Live stock — NOT imported into medicines table, displayed in preview only
     const liveRaw =
@@ -136,11 +149,13 @@ export function parseMedicinesFile(
     result.push({
       name,
       company: r['company'] ?? null,
+      generic_name,
       unit: r['unit'] ?? null,
       unit_packing: r['unit/packing'] ?? r['unit_packing'] ?? null,
       category: r['category'] ?? null,
       store_location: r['storebox'] ?? r['store_location'] ?? null,
       reorder_level: isNaN(reorder_level) ? 20 : reorder_level,
+      tax_percent,
       status,
       live_stock,
       raw_row: i + 1,

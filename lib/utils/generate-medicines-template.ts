@@ -110,6 +110,8 @@ export async function generateMedicinesTemplate(): Promise<void> {
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = 'medicines_import_template.xlsx'
+  document.body.appendChild(anchor)
   anchor.click()
+  document.body.removeChild(anchor)
   URL.revokeObjectURL(url)
 }

@@ -77,6 +77,10 @@ export function ImportPreviewStep({
 }: ImportPreviewStepProps) {
   const hasLiveStock = validRows.some((r) => r.live_stock !== null)
 
+  const toImportCount = validRows.filter(
+    (r) => !conflictResolutions[r.raw_row] || conflictResolutions[r.raw_row].action !== 'skip'
+  ).length
+
   const progressPct =
     importProgress.phase === 'inserting' && importProgress.totalBatches > 0
       ? Math.round((importProgress.currentBatch / importProgress.totalBatches) * 100)
@@ -261,7 +265,7 @@ export function ImportPreviewStep({
             </Button>
             <Button onClick={onImport}>
               <Upload className="w-4 h-4 mr-2" />
-              Import {validRows.length.toLocaleString()} medicines
+              Import {toImportCount.toLocaleString()} medicines
             </Button>
           </div>
         </>

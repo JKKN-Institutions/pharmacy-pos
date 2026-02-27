@@ -369,6 +369,7 @@ export function BulkImportDialog({ open, onOpenChange }: BulkImportDialogProps) 
           <ValidateStep
             allRows={allRows}
             filename={filename}
+            isChecking={isChecking}
             onBack={() => setStep('preview')}
             onCheckDuplicates={handleCheckDuplicates}
           />
@@ -406,7 +407,11 @@ export function BulkImportDialog({ open, onOpenChange }: BulkImportDialogProps) 
             skippedCount={skippedCount}
             isImporting={isImporting}
             importProgress={importProgress}
-            onBack={() => setStep(exactConflicts.length > 0 ? 'conflicts' : 'validate')}
+            onBack={() => {
+              if (exactConflicts.length > 0) setStep('conflicts')
+              else if (fuzzyMatches.length > 0) setStep('fuzzy')
+              else setStep('validate')
+            }}
             onImport={handleImport}
           />
         )}

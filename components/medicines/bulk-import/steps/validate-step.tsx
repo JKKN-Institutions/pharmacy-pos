@@ -22,12 +22,13 @@ type FilterTab = 'all' | 'valid' | 'errors' | 'duplicates'
 interface ValidateStepProps {
   allRows:           RowValidation[]
   filename:          string
+  isChecking?:       boolean
   onBack:            () => void
   onCheckDuplicates: () => void
 }
 
 export function ValidateStep({
-  allRows, filename, onBack, onCheckDuplicates,
+  allRows, filename, isChecking, onBack, onCheckDuplicates,
 }: ValidateStepProps) {
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
 
@@ -178,7 +179,7 @@ export function ValidateStep({
       {/* Footer */}
       <div className="px-6 py-4 flex items-center justify-between flex-shrink-0">
         <Button variant="outline" onClick={onBack}>Back</Button>
-        <Button disabled={validRows.length === 0} onClick={onCheckDuplicates}>
+        <Button disabled={validRows.length === 0 || !!isChecking} onClick={onCheckDuplicates}>
           <ScanSearch className="w-4 h-4 mr-2" />
           Check for Conflicts →
         </Button>

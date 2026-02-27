@@ -29,7 +29,7 @@ import {
   MoreHorizontal,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useBottomNav, useBottomNavHydration } from '@/hooks/use-bottom-nav'
+import { useBottomNav } from '@/hooks/use-bottom-nav'
 import { BottomNavItem } from './bottom-nav-item'
 import { BottomNavSubmenu } from './bottom-nav-submenu'
 import { BottomNavMoreMenu } from './bottom-nav-more-menu'
@@ -199,7 +199,9 @@ function getNavGroups(pathname: string, userRole: string): BottomNavGroup[] {
 export function BottomNavbar({ userRole }: BottomNavbarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const hasHydrated = useBottomNavHydration()
+  // useState(false) + useEffect guarantees null on both server render and the
+  // initial client hydration pass, preventing Radix useId counter mismatches.
+  const [mounted, setMounted] = useState(false)
 
   const {
     activeNavId,
@@ -265,6 +267,11 @@ export function BottomNavbar({ userRole }: BottomNavbarProps) {
     }
     return currentActiveGroup?.menus ?? []
   }, [effectiveActiveNavId, allNavGroups, currentActiveGroup])
+
+  // Mark as mounted after hydration so the nav only appears on the client.
+  // useEffect never runs on the server, so mounted stays false during SSR
+  // and during the initial client hydration pass — preventing Radix ID mismatches.
+  useEffect(() => { setMounted(true) }, [])
 
   // Sync active page info (before paint to avoid flash)
   useLayoutEffect(() => {
@@ -341,8 +348,8 @@ export function BottomNavbar({ userRole }: BottomNavbarProps) {
     }
   }, [isExpanded, setExpanded])
 
-  // Don't render until Zustand store has hydrated (prevents flash)
-  if (!hasHydrated) return null
+  // Don't render until after client mount (matches server's null output exactly)
+  if (!mounted) return null
   if (primaryNavGroups.length === 0) return null
 
   return (

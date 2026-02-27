@@ -26,7 +26,7 @@ export default async function MedicinesPage({
   const supabase = await createClient()
 
   // ── Pagination ────────────────────────────────────────────────────────────
-  const pageSize = Math.min(100, Math.max(10, parseInt(params.pageSize ?? '15')))
+  const pageSize = Math.min(500, Math.max(10, parseInt(params.pageSize ?? '15')))
   const page = Math.max(1, parseInt(params.page ?? '1'))
   const rangeFrom = (page - 1) * pageSize
   const rangeTo = rangeFrom + pageSize - 1   // Supabase range is inclusive

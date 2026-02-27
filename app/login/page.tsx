@@ -1,9 +1,10 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
-import { Pill, Package, BarChart3, ShieldCheck, Wifi } from 'lucide-react'
+import { Pill, Package, BarChart3, ShieldCheck, Wifi, Loader2 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
 /* ── Google SVG icon ── */
@@ -30,13 +31,19 @@ const features = [
 function LoginForm() {
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
+  const [loading, setLoading] = useState(false)
 
   async function handleGoogleLogin() {
+    // flushSync forces React to paint the loading state to the DOM immediately,
+    // before signInWithOAuth fires window.location.assign() and navigates away.
+    flushSync(() => setLoading(true))
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
+    // Reached only if the redirect fails — lets user try again
+    setLoading(false)
   }
 
   return (
@@ -68,23 +75,42 @@ function LoginForm() {
       >
         <Button
           onClick={handleGoogleLogin}
-          className="btn-shimmer w-full h-12 gap-3 text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white transition-all duration-200 shadow-md hover:shadow-lg rounded-xl"
+          disabled={loading}
+          className="btn-shimmer cursor-pointer w-full h-12 gap-3 text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white transition-all duration-200 shadow-md hover:shadow-lg rounded-xl disabled:opacity-80 disabled:cursor-not-allowed"
         >
-          <GoogleIcon />
-          Continue with Google
+          {loading ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+              Redirecting to Google…
+            </>
+          ) : (
+            <>
+              <GoogleIcon />
+              Continue with Google
+            </>
+          )}
         </Button>
       </div>
 
+      {/* Redirecting hint — only visible while loading */}
+      {loading && (
+        <p className="text-[11px] text-center text-blue-500 animate-pulse">
+          Opening Google sign-in, please wait…
+        </p>
+      )}
+
       {/* Terms */}
-      <p
-        className="animate-fade-up text-[11px] text-center text-gray-400 leading-relaxed"
-        style={{ animationDelay: '500ms' }}
-      >
-        By signing in you agree to our{' '}
-        <span className="underline cursor-pointer hover:text-blue-600 transition-colors">Terms of Service</span>
-        {' '}and{' '}
-        <span className="underline cursor-pointer hover:text-blue-600 transition-colors">Privacy Policy</span>
-      </p>
+      {!loading && (
+        <p
+          className="animate-fade-up text-[11px] text-center text-gray-400 leading-relaxed"
+          style={{ animationDelay: '500ms' }}
+        >
+          By signing in you agree to our{' '}
+          <span className="underline cursor-pointer hover:text-blue-600 transition-colors">Terms of Service</span>
+          {' '}and{' '}
+          <span className="underline cursor-pointer hover:text-blue-600 transition-colors">Privacy Policy</span>
+        </p>
+      )}
     </div>
   )
 }

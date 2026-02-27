@@ -84,7 +84,7 @@ const COLUMN_LABELS: Record<string, string> = {
   status: 'Status',
 }
 
-const PAGE_SIZE_OPTIONS = [10, 15, 25, 50] as const
+const PAGE_SIZE_OPTIONS = [10, 15, 25, 50, 100, 500] as const
 
 interface MedicinesDataTableProps {
   columns: ColumnDef<MedicineRow>[]

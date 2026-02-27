@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Upload } from 'lucide-react'
-import { BulkImportDialog } from './bulk-import-dialog'
+import { BulkImportDialog } from './bulk-import'
 
 export function BulkImportButton() {
   const [open, setOpen] = useState(false)

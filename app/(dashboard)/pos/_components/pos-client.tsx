@@ -8,9 +8,9 @@ import { BillLineItems } from './bill-line-items'
 import { BillTotals } from './bill-totals'
 import { CustomerInfo } from './customer-info'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Wifi, WifiOff, RefreshCw, ShoppingCart, History } from 'lucide-react'
-import Link from 'next/link'
+import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
 import { calculateLineItem, calculateBillTotals } from '@/lib/utils/billing'
 import type { DiscountType } from '@/lib/types/database'
 
@@ -30,12 +30,14 @@ export interface BillItem {
   price: number
 }
 
-interface PosClientProps {
+interface PosFormProps {
   userId?: string
   branchId?: string
+  onSaved?: () => void
+  onCancel?: () => void
 }
 
-export function PosClient({ userId, branchId }: PosClientProps) {
+export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
   const [isOnline, setIsOnline] = useState(true)
   const [isSyncing, setIsSyncing] = useState(false)
   const [items, setItems] = useState<BillItem[]>([])
@@ -130,7 +132,7 @@ export function PosClient({ userId, branchId }: PosClientProps) {
       customer_phone: customerPhone || null,
       doctor: doctor || null,
       payment_method: paymentMethod,
-      items: items.map(({ id, medicine_name, available_qty, ...rest }) => rest),
+      items: items.map(({ id, available_qty, ...rest }) => rest),
       subtotal: totals.subtotal,
       discount_total: totals.discount_total,
       tax_total: totals.tax_total,
@@ -152,6 +154,7 @@ export function PosClient({ userId, branchId }: PosClientProps) {
         if (res.ok) {
           toast.success(`Bill ${responseData.bill_no} saved!`)
           clearBill()
+          onSaved?.()
         } else {
           toast.error(responseData.error ?? 'Failed to save bill')
         }
@@ -174,53 +177,47 @@ export function PosClient({ userId, branchId }: PosClientProps) {
     })
     toast.warning('Saved offline — will sync when internet returns')
     clearBill()
+    onSaved?.()
   }
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+
+      {/* Status bar */}
+      <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5 text-primary" />
-          <h1 className="text-xl font-semibold">New Bill</h1>
-        </div>
-        <div className="flex items-center gap-3">
           {isOnline ? (
-            <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium">
-              <Wifi className="w-4 h-4" /> Online
-            </span>
+            <Badge variant="outline" className="gap-1.5 text-green-700 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+              <Wifi className="w-3 h-3" /> Online
+            </Badge>
           ) : (
-            <span className="flex items-center gap-1.5 text-amber-600 text-sm font-medium">
-              <WifiOff className="w-4 h-4" /> Offline Mode
-            </span>
+            <Badge variant="outline" className="gap-1.5 text-amber-700 border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-400">
+              <WifiOff className="w-3 h-3" /> Offline Mode
+            </Badge>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setIsSyncing(true)
-              syncMedicines().then(() => {
-                toast.success('Medicine catalog synced')
-              }).finally(() => setIsSyncing(false))
-            }}
-            title="Sync medicines"
-          >
-            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/pos/bills">
-              <History className="w-4 h-4 mr-1.5" />
-              Bill History
-            </Link>
-          </Button>
         </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setIsSyncing(true)
+            syncMedicines()
+              .then(() => toast.success('Medicine catalog synced'))
+              .finally(() => setIsSyncing(false))
+          }}
+          className="h-8 gap-1.5 text-muted-foreground text-xs"
+          title="Sync medicine catalog"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+          Sync catalog
+        </Button>
       </div>
 
       {/* Medicine Search */}
-      <MedicineSearch onAddItem={addItem} />
+      <MedicineSearch onAddItem={addItem} isSyncing={isSyncing} />
 
       {/* Bill Items Table */}
-      <div className="bg-card rounded-lg border">
+      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
         <BillLineItems items={items} onUpdate={updateItem} onRemove={removeItem} />
         <BillTotals totals={totals} />
       </div>
@@ -235,14 +232,26 @@ export function PosClient({ userId, branchId }: PosClientProps) {
       />
 
       {/* Actions */}
-      <div className="flex gap-3 justify-end">
-        <Button variant="outline" onClick={clearBill} disabled={saving || items.length === 0}>
-          Clear
+      <div className="flex gap-3 justify-end pt-1">
+        <Button
+          variant="outline"
+          onClick={() => { clearBill(); onCancel?.() }}
+          disabled={saving}
+        >
+          Cancel
         </Button>
-        <Button onClick={handleSave} disabled={saving || items.length === 0} size="lg" className="px-10">
+        <Button
+          onClick={handleSave}
+          disabled={saving || items.length === 0}
+          size="lg"
+          className="px-10 gap-2"
+        >
           {saving ? 'Saving...' : `Save Bill · ₹${totals.total.toFixed(2)}`}
         </Button>
       </div>
     </div>
   )
 }
+
+/** @deprecated use PosForm instead */
+export const PosClient = PosForm

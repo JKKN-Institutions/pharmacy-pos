@@ -33,6 +33,9 @@ export async function createExpenseAction(formData: FormData) {
   })
   if (error) return { error: error.message }
   revalidatePath('/expenses')
+  revalidatePath('/reports/expenses')
+  revalidatePath('/reports/income-expense')
+  revalidatePath('/')
   return { success: true }
 }
 
@@ -42,9 +45,15 @@ export async function updateExpenseAction(id: string, formData: FormData) {
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const supabase = await createClient()
-  const { error } = await supabase.from('expenses').update(parsed.data).eq('id', id)
+  const { error } = await supabase.from('expenses').update({
+    ...parsed.data,
+    description: parsed.data.description || null,
+  }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/expenses')
+  revalidatePath('/reports/expenses')
+  revalidatePath('/reports/income-expense')
+  revalidatePath('/')
   return { success: true }
 }
 
@@ -53,5 +62,8 @@ export async function deleteExpenseAction(id: string) {
   const { error } = await supabase.from('expenses').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/expenses')
+  revalidatePath('/reports/expenses')
+  revalidatePath('/reports/income-expense')
+  revalidatePath('/')
   return { success: true }
 }

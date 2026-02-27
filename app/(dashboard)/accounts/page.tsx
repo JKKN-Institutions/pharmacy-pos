@@ -31,13 +31,13 @@ export default async function AccountsPage() {
   const invoicesData = (invoices ?? []) as unknown as InvoiceRow[]
   const todayStr = new Date().toISOString().slice(0, 10)
 
-  const { data: todayBills } = await supabase.from('pos_bills').select('total, status').eq('bill_date', todayStr).eq('status', 'paid')
+  const { data: todayBills } = await supabase.from('pos_bills').select('paid').eq('bill_date', todayStr).neq('status', 'cancelled')
 
   const { data: todayInvoicePaid } = await supabase.from('invoices').select('paid').eq('invoice_date', todayStr).neq('payment_status', 'unpaid')
 
   const { data: todayExpenses } = await supabase.from('expenses').select('amount').eq('date', todayStr)
 
-  const posCashToday = (todayBills ?? []).reduce((s, b) => s + (b.total ?? 0), 0)
+  const posCashToday = (todayBills ?? []).reduce((s, b) => s + (b.paid ?? 0), 0)
   const invoicePaidToday = (todayInvoicePaid ?? []).reduce((s, i) => s + (i.paid ?? 0), 0)
   const expensesToday = (todayExpenses ?? []).reduce((s, e) => s + (e.amount ?? 0), 0)
   const totalInflow = posCashToday + invoicePaidToday

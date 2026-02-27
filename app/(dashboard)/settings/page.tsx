@@ -1,16 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { PageHeader } from '@/components/ui/page-header'
 import { SettingsForm } from '@/components/settings/settings-form'
-import { Settings, Percent, Database, ChevronRight } from 'lucide-react'
+import { Settings, Database, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 
 const subModules = [
-  {
-    href: '/settings/taxes',
-    icon: Percent,
-    label: 'Tax Rates',
-    description: 'Manage GST and other tax percentages',
-  },
   {
     href: '/settings/data-migration',
     icon: Database,

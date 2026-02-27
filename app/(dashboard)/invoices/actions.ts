@@ -44,7 +44,11 @@ export async function createInvoiceAction(data: {
     ? await supabase.from('user_profiles').select('id').eq('auth_user_id', user.id).single()
     : { data: null }
 
-  const invoiceNo = `INV-${String(Date.now()).slice(-5)}`
+  // Sequential invoice number — avoids Date.now() collision risk
+  const { count: existingCount } = await supabase
+    .from('invoices')
+    .select('id', { count: 'exact', head: true })
+  const invoiceNo = `INV-${String((existingCount ?? 0) + 1).padStart(5, '0')}`
 
   const { data: invoice, error } = await supabase
     .from('invoices')
@@ -67,9 +71,15 @@ export async function createInvoiceAction(data: {
 
   if (error) return { error: error.message }
 
-  await supabase.from('invoice_items').insert(
+  const { error: itemsError } = await supabase.from('invoice_items').insert(
     data.items.map(item => ({ ...item, invoice_id: invoice.id }))
   )
+
+  if (itemsError) {
+    // Rollback: remove the orphaned invoice header
+    await supabase.from('invoices').delete().eq('id', invoice.id)
+    return { error: `Failed to save invoice items: ${itemsError.message}` }
+  }
 
   revalidatePath('/invoices')
   redirect('/invoices')
@@ -77,8 +87,13 @@ export async function createInvoiceAction(data: {
 
 export async function deleteInvoiceAction(id: string) {
   const supabase = await createClient()
+
+  // Delete line items first — explicit cleanup regardless of DB cascade config
+  await supabase.from('invoice_items').delete().eq('invoice_id', id)
+
   const { error } = await supabase.from('invoices').delete().eq('id', id)
   if (error) return { error: error.message }
+
   revalidatePath('/invoices')
   return { success: true }
 }

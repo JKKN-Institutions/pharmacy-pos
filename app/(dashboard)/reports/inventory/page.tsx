@@ -10,11 +10,11 @@ import Link from 'next/link'
 type StockBatchRow = {
   id: string
   medicine_id: string
-  batch_number: string
+  batch_no: string
   expiry_date: string
   available_qty: number
   purchase_price: number
-  selling_price: number
+  sale_price: number
   status: string
   medicines: { name: string } | null
 }
@@ -25,7 +25,7 @@ export default async function InventoryReportPage() {
   const { data: batches } = await supabase
     .from('stock_batches')
     .select(
-      'id, medicine_id, batch_number, expiry_date, available_qty, purchase_price, selling_price, status, medicines(name)'
+      'id, medicine_id, batch_no, expiry_date, available_qty, purchase_price, sale_price, status, medicines(name)'
     )
     .eq('status', 'active')
     .order('expiry_date', { ascending: true })
@@ -137,7 +137,7 @@ export default async function InventoryReportPage() {
                           {batch.medicines?.name ?? '—'}
                         </td>
                         <td className="p-4 font-mono text-xs text-muted-foreground">
-                          {batch.batch_number}
+                          {batch.batch_no}
                         </td>
                         <td className={`p-4 text-sm ${expiryClass}`}>
                           {format(expiry, 'dd MMM yyyy')}
@@ -146,7 +146,7 @@ export default async function InventoryReportPage() {
                           {Number(batch.available_qty).toLocaleString('en-IN')}
                         </td>
                         <td className="p-4 text-right">{formatINR(batch.purchase_price)}</td>
-                        <td className="p-4 text-right">{formatINR(batch.selling_price)}</td>
+                        <td className="p-4 text-right">{formatINR(batch.sale_price)}</td>
                         <td className="p-4 text-right font-semibold">{formatINR(stockValue)}</td>
                       </tr>
                     )

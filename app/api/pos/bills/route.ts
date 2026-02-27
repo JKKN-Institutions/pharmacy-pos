@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { calculateLineItem } from '@/lib/utils/billing'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -63,31 +64,50 @@ export async function POST(req: NextRequest) {
 
   // Insert bill line items
   const { error: itemsError } = await supabase.from('pos_bill_items').insert(
-    data.items.map((item: any) => ({
-      bill_id: bill.id,
-      medicine_id: item.medicine_id,
-      stock_batch_id: item.stock_batch_id,
-      batch_no: item.batch_no,
-      expiry_date: item.expiry_date,
-      qty: item.qty,
-      sale_price: item.sale_price,
-      discount_type: item.discount_type,
-      discount_value: item.discount_value,
-      tax: item.tax,
-      price: item.price,
-    }))
+    data.items.map((item: any) => {
+      const line = calculateLineItem({
+        qty: item.qty,
+        unit_price: item.sale_price,
+        discount_type: item.discount_type,
+        discount_value: item.discount_value,
+        tax: item.tax,
+      })
+      return {
+        bill_id:        bill.id,
+        medicine_id:    item.medicine_id,
+        stock_batch_id: item.stock_batch_id,
+        batch_no:       item.batch_no,
+        expiry_date:    item.expiry_date,
+        qty:            item.qty,
+        sale_price:     item.sale_price,
+        discount_type:  item.discount_type,
+        discount_value: item.discount_value,
+        tax:            item.tax,
+        price:          line.price,
+      }
+    })
   )
 
   if (itemsError) {
     return NextResponse.json({ error: itemsError.message }, { status: 500 })
   }
 
-  // Atomically deduct stock from each batch using DB function
+  // Deduct stock from each batch (direct update — no RPC dependency)
   for (const item of data.items) {
-    await supabase.rpc('deduct_batch_stock', {
-      p_batch_id: item.stock_batch_id,
-      p_qty: item.qty,
-    })
+    const { data: batch } = await supabase
+      .from('stock_batches')
+      .select('available_qty, sold_qty')
+      .eq('id', item.stock_batch_id)
+      .single()
+    if (batch) {
+      await supabase
+        .from('stock_batches')
+        .update({
+          sold_qty: Number(batch.sold_qty) + Number(item.qty),
+          available_qty: Number(batch.available_qty) - Number(item.qty),
+        })
+        .eq('id', item.stock_batch_id)
+    }
   }
 
   return NextResponse.json({ bill_no: bill.bill_no, id: bill.id })

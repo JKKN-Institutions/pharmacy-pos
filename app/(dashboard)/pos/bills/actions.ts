@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import type { PosBillItem } from '@/lib/types/database'
 
 export async function getBillItemsAction(billId: string) {
   if (!billId) return { data: null, error: 'Bill ID is required' }
@@ -21,17 +20,46 @@ export async function deleteBillAction(id: string) {
 
   const supabase = await createClient()
 
-  // Delete bill items first (cascade may handle this, but explicit is safer)
+  // 1. Fetch bill items BEFORE deleting — needed to restore stock
+  const { data: billItems } = await supabase
+    .from('pos_bill_items')
+    .select('stock_batch_id, qty')
+    .eq('bill_id', id)
+
+  // 2. Restore stock for each line item
+  if (billItems && billItems.length > 0) {
+    for (const item of billItems) {
+      if (!item.stock_batch_id) continue
+
+      const { data: batch } = await supabase
+        .from('stock_batches')
+        .select('available_qty, sold_qty')
+        .eq('id', item.stock_batch_id)
+        .single()
+
+      if (batch) {
+        await supabase
+          .from('stock_batches')
+          .update({
+            available_qty: Number(batch.available_qty) + Number(item.qty),
+            sold_qty: Math.max(0, Number(batch.sold_qty) - Number(item.qty)),
+          })
+          .eq('id', item.stock_batch_id)
+      }
+    }
+  }
+
+  // 3. Delete line items
   const { error: itemsError } = await supabase
     .from('pos_bill_items')
     .delete()
     .eq('bill_id', id)
 
   if (itemsError) {
-    // If table doesn't exist or already handled by cascade, continue
     console.warn('Could not delete bill items:', itemsError.message)
   }
 
+  // 4. Delete the bill
   const { error } = await supabase
     .from('pos_bills')
     .delete()
@@ -41,5 +69,6 @@ export async function deleteBillAction(id: string) {
 
   revalidatePath('/pos/bills')
   revalidatePath('/pos')
+  revalidatePath('/stock')
   return { success: true }
 }

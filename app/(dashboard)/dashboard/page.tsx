@@ -4,37 +4,71 @@ import { KpiCards } from '@/components/dashboard/kpi-cards'
 import { RevenueChart } from '@/components/dashboard/revenue-chart'
 import { StockAlerts } from '@/components/dashboard/stock-alerts'
 import { RecentBills } from '@/components/dashboard/recent-bills'
+import { ExpensesChart } from '@/components/dashboard/expenses-chart'
+import { ExpenseByTypeChart } from '@/components/dashboard/expense-by-type-chart'
+import { SalaryChart } from '@/components/dashboard/salary-chart'
+import { PurchaseChart } from '@/components/dashboard/purchase-chart'
+import { CustomerChart } from '@/components/dashboard/customer-chart'
 import { PageHeader } from '@/components/ui/page-header'
+import { Skeleton } from '@/components/ui/skeleton'
 import { format } from 'date-fns'
+
+export const dynamic = 'force-dynamic'
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns last 12 month slots as 'YYYY-MM', oldest first. */
+function getLast12MonthSlots(): string[] {
+  const slots: string[] = []
+  const now = new Date()
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    slots.push(format(d, 'yyyy-MM'))
+  }
+  return slots
+}
+
+/** 'YYYY-MM' → 'Jan', 'Feb', etc. */
+function shortMonth(yyyyMM: string): string {
+  return format(new Date(yyyyMM + '-01'), 'MMM')
+}
+
+// ── Skeletons ─────────────────────────────────────────────────────────────────
 
 function KpiSkeleton() {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="h-32 rounded-2xl bg-muted animate-pulse" />
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Skeleton key={i} className="h-[112px] rounded-xl" />
       ))}
     </div>
   )
 }
 
 function ChartSkeleton() {
-  return <div className="h-64 rounded-2xl bg-muted animate-pulse" />
+  return <Skeleton className="h-[280px] rounded-xl" />
 }
 
-export default async function DashboardPage() {
-  const today = format(new Date(), 'yyyy-MM-dd')
+function SmallChartSkeleton() {
+  return <Skeleton className="h-[220px] rounded-xl" />
+}
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description={`Overview · ${format(new Date(), 'dd MMMM yyyy')}`}
+        description={`Overview · ${format(new Date(), 'EEEE, dd MMMM yyyy')}`}
       />
 
+      {/* KPI Cards — Income, Expenses, Salary, Purchase */}
       <Suspense fallback={<KpiSkeleton />}>
-        <KpiCardsServer today={today} />
+        <KpiCardsServer />
       </Suspense>
 
+      {/* Revenue (12-month stacked) + Stock Alerts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Suspense fallback={<ChartSkeleton />}>
@@ -48,6 +82,30 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* Expenses Line Chart + Expense by Type Donut */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Suspense fallback={<SmallChartSkeleton />}>
+          <ExpensesChartServer />
+        </Suspense>
+        <Suspense fallback={<SmallChartSkeleton />}>
+          <ExpenseByTypeServer />
+        </Suspense>
+      </div>
+
+      {/* Salary Bar + Purchase Area + Customer Bar */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Suspense fallback={<SmallChartSkeleton />}>
+          <SalaryChartServer />
+        </Suspense>
+        <Suspense fallback={<SmallChartSkeleton />}>
+          <PurchaseChartServer />
+        </Suspense>
+        <Suspense fallback={<SmallChartSkeleton />}>
+          <CustomerChartServer />
+        </Suspense>
+      </div>
+
+      {/* Recent Bills */}
       <Suspense fallback={<ChartSkeleton />}>
         <RecentBillsServer />
       </Suspense>
@@ -55,88 +113,68 @@ export default async function DashboardPage() {
   )
 }
 
-async function KpiCardsServer({ today }: { today: string }) {
+// ── Server Data Functions ─────────────────────────────────────────────────────
+
+async function KpiCardsServer() {
   const supabase = await createClient()
+  const today = format(new Date(), 'yyyy-MM-dd')
 
   const [
-    { data: todayBills },
-    { data: totalBills },
+    { data: posBills },
+    { data: invoices },
     { data: expenses },
-    { data: totalMedicines },
+    { data: salary },
+    { data: purchases },
   ] = await Promise.all([
-    supabase.from('pos_bills').select('total').eq('bill_date', today),
-    supabase.from('pos_bills').select('total'),
-    supabase.from('expenses').select('amount').gte('date', today.slice(0, 7) + '-01'),
-    supabase.from('medicines').select('id').eq('status', 'active'),
+    supabase.from('pos_bills').select('total, bill_date'),
+    supabase.from('invoices').select('total'),
+    supabase.from('expenses').select('amount'),
+    supabase.from('salary_records').select('amount'),
+    supabase.from('purchases').select('total'),
   ])
 
-  const todaySales = (todayBills ?? []).reduce((s, b) => s + Number(b.total), 0)
-  const totalSales = (totalBills ?? []).reduce((s, b) => s + Number(b.total), 0)
-  const monthExpenses = (expenses ?? []).reduce((s, e) => s + Number(e.amount), 0)
-  const medicineCount = totalMedicines?.length ?? 0
+  const posTotal     = (posBills  ?? []).reduce((s, b) => s + Number(b.total),  0)
+  const invoiceTotal = (invoices  ?? []).reduce((s, i) => s + Number(i.total),  0)
+  const totalIncome   = posTotal + invoiceTotal
+  const totalExpenses = (expenses ?? []).reduce((s, e) => s + Number(e.amount), 0)
+  const totalSalary   = (salary   ?? []).reduce((s, r) => s + Number(r.amount), 0)
+  const totalPurchase = (purchases ?? []).reduce((s, p) => s + Number(p.total), 0)
 
-  // Get low stock count
-  const { data: stockData } = await supabase
-    .from('medicines')
-    .select('id, reorder_level')
-    .eq('status', 'active')
-
-  let lowStockCount = 0
-  if (stockData && stockData.length > 0) {
-    const { data: stockBatches } = await supabase
-      .from('stock_batches')
-      .select('medicine_id, available_qty')
-      .eq('status', 'active')
-
-    const stockByMedicine = (stockBatches ?? []).reduce((acc, sb) => {
-      acc[sb.medicine_id] = (acc[sb.medicine_id] ?? 0) + Number(sb.available_qty)
-      return acc
-    }, {} as Record<string, number>)
-
-    lowStockCount = stockData.filter(m => (stockByMedicine[m.id] ?? 0) <= m.reorder_level).length
-  }
+  const todaySales = (posBills ?? [])
+    .filter(b => b.bill_date === today)
+    .reduce((s, b) => s + Number(b.total), 0)
 
   return (
     <KpiCards
+      totalIncome={totalIncome}
+      totalExpenses={totalExpenses}
+      totalSalary={totalSalary}
+      totalPurchase={totalPurchase}
       todaySales={todaySales}
-      totalSales={totalSales}
-      monthExpenses={monthExpenses}
-      medicineCount={medicineCount}
-      lowStockCount={lowStockCount}
     />
   )
 }
 
 async function RevenueChartServer() {
   const supabase = await createClient()
+  const slots    = getLast12MonthSlots()
+  const fromDate = slots[0] + '-01'
 
-  // Get last 7 days of POS bills
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6)
-  const fromDate = format(sevenDaysAgo, 'yyyy-MM-dd')
+  const [{ data: bills }, { data: invoices }] = await Promise.all([
+    supabase.from('pos_bills').select('bill_date, total').gte('bill_date', fromDate),
+    supabase.from('invoices').select('invoice_date, total').gte('invoice_date', fromDate),
+  ])
 
-  const { data: bills } = await supabase
-    .from('pos_bills')
-    .select('bill_date, total')
-    .gte('bill_date', fromDate)
-    .order('bill_date')
+  const posMap:     Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
+  const invoiceMap: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
 
-  // Aggregate by day
-  const dayMap: Record<string, number> = {}
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date()
-    d.setDate(d.getDate() - i)
-    dayMap[format(d, 'yyyy-MM-dd')] = 0
-  }
-  ;(bills ?? []).forEach(b => {
-    if (dayMap[b.bill_date] !== undefined) {
-      dayMap[b.bill_date] += Number(b.total)
-    }
-  })
+  ;(bills    ?? []).forEach(b => { const k = b.bill_date?.slice(0, 7);    if (k && k in posMap)     posMap[k]     += Number(b.total) })
+  ;(invoices ?? []).forEach(i => { const k = i.invoice_date?.slice(0, 7); if (k && k in invoiceMap) invoiceMap[k] += Number(i.total) })
 
-  const chartData = Object.entries(dayMap).map(([date, total]) => ({
-    date: format(new Date(date), 'dd MMM'),
-    total,
+  const chartData = slots.map(s => ({
+    month:   shortMonth(s),
+    pos:     posMap[s],
+    invoice: invoiceMap[s],
   }))
 
   return <RevenueChart data={chartData} />
@@ -144,23 +182,117 @@ async function RevenueChartServer() {
 
 async function StockAlertsServer() {
   const supabase = await createClient()
-  const today = format(new Date(), 'yyyy-MM-dd')
-
-  // Expiring in next 30 days
-  const thirtyDaysLater = new Date()
-  thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30)
+  const today          = format(new Date(), 'yyyy-MM-dd')
+  const thirtyDaysOut  = format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd')
 
   const { data: expiring } = await supabase
     .from('stock_batches')
     .select('*, medicines(name)')
     .eq('status', 'active')
     .gte('expiry_date', today)
-    .lte('expiry_date', format(thirtyDaysLater, 'yyyy-MM-dd'))
+    .lte('expiry_date', thirtyDaysOut)
     .gt('available_qty', 0)
     .order('expiry_date')
     .limit(5)
 
   return <StockAlerts items={expiring ?? []} />
+}
+
+async function ExpensesChartServer() {
+  const supabase = await createClient()
+  const slots    = getLast12MonthSlots()
+  const fromDate = slots[0] + '-01'
+
+  const { data: expenses } = await supabase
+    .from('expenses')
+    .select('date, amount')
+    .gte('date', fromDate)
+
+  const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
+  ;(expenses ?? []).forEach(e => {
+    const k = e.date?.slice(0, 7)
+    if (k && k in map) map[k] += Number(e.amount)
+  })
+
+  return <ExpensesChart data={slots.map(s => ({ month: shortMonth(s), amount: map[s] }))} />
+}
+
+async function ExpenseByTypeServer() {
+  const supabase = await createClient()
+
+  const { data: expenses } = await supabase
+    .from('expenses')
+    .select('expense_type, amount')
+
+  const typeMap: Record<string, number> = {}
+  ;(expenses ?? []).forEach(e => {
+    const t = (e.expense_type as string) || 'Other'
+    typeMap[t] = (typeMap[t] ?? 0) + Number(e.amount)
+  })
+
+  const chartData = Object.entries(typeMap)
+    .map(([type, amount]) => ({ type, amount }))
+    .sort((a, b) => b.amount - a.amount)
+
+  return <ExpenseByTypeChart data={chartData} />
+}
+
+async function SalaryChartServer() {
+  const supabase = await createClient()
+  const slots    = getLast12MonthSlots()
+  const fromDate = slots[0] + '-01'
+
+  const { data: salary } = await supabase
+    .from('salary_records')
+    .select('date, amount')
+    .gte('date', fromDate)
+
+  const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
+  ;(salary ?? []).forEach(r => {
+    const k = r.date?.slice(0, 7)
+    if (k && k in map) map[k] += Number(r.amount)
+  })
+
+  return <SalaryChart data={slots.map(s => ({ month: shortMonth(s), amount: map[s] }))} />
+}
+
+async function PurchaseChartServer() {
+  const supabase = await createClient()
+  const slots    = getLast12MonthSlots()
+  const fromDate = slots[0] + '-01'
+
+  const { data: purchases } = await supabase
+    .from('purchases')
+    .select('purchase_date, total')
+    .gte('purchase_date', fromDate)
+
+  const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
+  ;(purchases ?? []).forEach(p => {
+    const k = p.purchase_date?.slice(0, 7)
+    if (k && k in map) map[k] += Number(p.total)
+  })
+
+  return <PurchaseChart data={slots.map(s => ({ month: shortMonth(s), amount: map[s] }))} />
+}
+
+async function CustomerChartServer() {
+  const supabase = await createClient()
+  const slots    = getLast12MonthSlots()
+  const fromDate = slots[0] + '-01T00:00:00'
+
+  const { data: customers } = await supabase
+    .from('customers')
+    .select('created_at')
+    .gte('created_at', fromDate)
+
+  const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
+  ;(customers ?? []).forEach(c => {
+    if (!c.created_at) return
+    const k = (c.created_at as string).slice(0, 7)
+    if (k in map) map[k]++
+  })
+
+  return <CustomerChart data={slots.map(s => ({ month: shortMonth(s), count: map[s] }))} />
 }
 
 async function RecentBillsServer() {

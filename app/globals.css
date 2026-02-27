@@ -126,3 +126,86 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Hide scrollbar track/thumb while keeping scroll functionality */
+@layer utilities {
+  .scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Login page animations ── */
+@keyframes slide-from-left {
+  from { transform: translateX(-80px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes slide-from-right {
+  from { transform: translateX(80px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes fade-up {
+  from { transform: translateY(22px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes icon-float {
+  0%, 100% { transform: translateY(0px)    rotate(0deg); }
+  50%       { transform: translateY(-14px) rotate(3deg); }
+}
+@keyframes orb-drift {
+  0%, 100% { transform: translate(0,    0)    scale(1);    }
+  33%       { transform: translate(28px,-22px) scale(1.06); }
+  66%       { transform: translate(-20px,16px) scale(0.95); }
+}
+@keyframes pulse-ring {
+  0%, 100% { transform: scale(1);    opacity: 0.55; }
+  60%       { transform: scale(1.18); opacity: 0;    }
+}
+@keyframes badge-pop {
+  0%   { transform: scale(0.85) translateY(10px); opacity: 0; }
+  70%  { transform: scale(1.04) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1)    translateY(0);    opacity: 1; }
+}
+@keyframes btn-shimmer {
+  from { left: -120%; }
+  to   { left:  160%; }
+}
+
+@layer utilities {
+  .animate-slide-left  { animation: slide-from-left  0.8s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-slide-right { animation: slide-from-right 0.8s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-fade-up     { animation: fade-up          0.65s cubic-bezier(0.16,1,0.3,1) both; }
+  .animate-icon-float  { animation: icon-float       3.8s  ease-in-out infinite; }
+  .animate-orb-drift   { animation: orb-drift        10s   ease-in-out infinite; }
+  .animate-orb-drift-2 { animation: orb-drift        13s   ease-in-out 1.5s infinite reverse; }
+  .animate-pulse-ring  { animation: pulse-ring       2.4s  ease-in-out infinite; }
+  .animate-badge-pop   { animation: badge-pop        0.5s  cubic-bezier(0.16,1,0.3,1) both; }
+
+  /* Dot-grid texture for the brand panel */
+  .dots-pattern {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Shimmer button */
+  .btn-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-shimmer::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    left: -120%;
+    width: 60%;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%);
+    transform: skewX(-18deg);
+    pointer-events: none;
+  }
+  .btn-shimmer:hover::before {
+    animation: btn-shimmer 0.65s ease-in-out;
+  }
+}

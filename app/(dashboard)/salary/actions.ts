@@ -32,6 +32,28 @@ export async function createSalaryAction(formData: FormData) {
   })
   if (error) return { error: error.message }
   revalidatePath('/salary')
+  revalidatePath('/reports/income-expense')
+  revalidatePath('/')
+  return { success: true }
+}
+
+export async function updateSalaryAction(id: string, formData: FormData) {
+  const raw = Object.fromEntries(formData.entries())
+  const parsed = salarySchema.safeParse(raw)
+  if (!parsed.success) return { error: parsed.error.issues[0].message }
+
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('salary_records')
+    .update({
+      ...parsed.data,
+      note: parsed.data.note || null,
+    })
+    .eq('id', id)
+  if (error) return { error: error.message }
+  revalidatePath('/salary')
+  revalidatePath('/reports/income-expense')
+  revalidatePath('/')
   return { success: true }
 }
 
@@ -40,5 +62,7 @@ export async function deleteSalaryAction(id: string) {
   const { error } = await supabase.from('salary_records').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/salary')
+  revalidatePath('/reports/income-expense')
+  revalidatePath('/')
   return { success: true }
 }

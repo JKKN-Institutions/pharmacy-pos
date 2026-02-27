@@ -4,13 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 export async function GET() {
   const supabase = await createClient()
 
-  const { data: medicines } = await supabase
+  const { data: medicines, error } = await supabase
     .from('medicines')
     .select(`
       id,
       name,
       company,
-      tax_percent,
       stock_batches!inner(
         id,
         batch_no,
@@ -22,6 +21,11 @@ export async function GET() {
     .eq('status', 'active')
     .gt('stock_batches.available_qty', 0)
     .order('name')
+
+  if (error) {
+    console.error('[sync] medicines query failed:', error.message)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   return NextResponse.json({
     medicines: medicines ?? [],

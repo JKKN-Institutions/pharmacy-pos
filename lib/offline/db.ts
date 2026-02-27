@@ -4,7 +4,7 @@ interface OfflineMedicine {
   id: string
   name: string
   company: string | null
-  tax_percent: number
+  tax_percent?: number
   batches: Array<{
     id: string
     batch_no: string

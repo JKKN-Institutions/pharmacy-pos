@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { LucideIcon } from 'lucide-react'
+import { TrendingUp, TrendingDown, LucideIcon } from 'lucide-react'
 
 interface StatsCardProps {
   title: string
@@ -26,24 +26,34 @@ export function StatsCard({
   iconClassName,
 }: StatsCardProps) {
   return (
-    <Card className={cn('rounded-2xl border shadow-sm', className)}>
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold tracking-tight">{value}</p>
+    <Card className={cn('rounded-xl border shadow-sm min-w-0 overflow-hidden py-0', className)}>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <div className="space-y-0.5 flex-1 min-w-0 overflow-hidden">
+            <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
+            <p className="text-base sm:text-xl font-bold tracking-tight tabular-nums truncate">{value}</p>
             {description && (
-              <p className="text-xs text-muted-foreground">{description}</p>
+              <p className="text-[11px] text-muted-foreground truncate">{description}</p>
             )}
             {trend && (
-              <p className={cn('text-xs font-medium', trend.positive ? 'text-green-600' : 'text-red-500')}>
-                {trend.positive ? '+' : ''}{trend.value}% {trend.label}
-              </p>
+              <div className={cn(
+                'flex items-center gap-1 text-xs font-medium',
+                trend.positive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+              )}>
+                {trend.positive
+                  ? <TrendingUp className="h-3 w-3" />
+                  : <TrendingDown className="h-3 w-3" />
+                }
+                <span>{trend.positive ? '+' : ''}{trend.value}% {trend.label}</span>
+              </div>
             )}
           </div>
           {Icon && (
-            <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', iconClassName ?? 'bg-primary/10')}>
-              <Icon className="w-5 h-5 text-primary" />
+            <div className={cn(
+              'flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg shrink-0',
+              iconClassName ?? 'bg-primary/10'
+            )}>
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
           )}
         </div>

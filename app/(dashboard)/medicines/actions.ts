@@ -46,9 +46,12 @@ export async function updateMedicineAction(id: string, formData: FormData) {
 
 export async function deleteMedicineAction(id: string) {
   const supabase = await createClient()
+  // Remove stock batches linked to this medicine before deleting the master record
+  await supabase.from('stock_batches').delete().eq('medicine_id', id)
   const { error } = await supabase.from('medicines').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/medicines')
+  revalidatePath('/stock')
   return { success: true }
 }
 
@@ -60,12 +63,15 @@ export async function bulkDeleteMedicinesAction(ids: string[]): Promise<{
 }> {
   if (!ids.length) return { deleted: 0 }
   const supabase = await createClient()
+  // Remove stock batches for all selected medicines first
+  await supabase.from('stock_batches').delete().in('medicine_id', ids)
   const { error, count } = await supabase
     .from('medicines')
     .delete({ count: 'exact' })
     .in('id', ids)
   if (error) return { deleted: 0, error: error.message }
   revalidatePath('/medicines')
+  revalidatePath('/stock')
   return { deleted: count ?? ids.length }
 }
 

@@ -7,6 +7,7 @@ import { deleteSalaryAction } from './actions'
 import { toast } from 'sonner'
 import { formatINR } from '@/lib/utils/currency'
 import type { SalaryRecord } from '@/lib/types/database'
+import { SalaryEditDialog } from '@/components/salary/salary-form-dialog'
 
 export const salaryColumns: ColumnDef<SalaryRecord>[] = [
   {
@@ -39,15 +40,18 @@ export const salaryColumns: ColumnDef<SalaryRecord>[] = [
     cell: ({ row }) => {
       const record = row.original
       return (
-        <ConfirmDialog
-          title="Delete salary record?"
-          description={`Delete salary record for ${record.staff_name}?`}
-          onConfirm={async () => {
-            const result = await deleteSalaryAction(record.id)
-            if (result?.error) toast.error(result.error)
-            else toast.success('Record deleted')
-          }}
-        />
+        <div className="flex items-center gap-1">
+          <SalaryEditDialog record={record} />
+          <ConfirmDialog
+            title="Delete salary record?"
+            description={`Delete salary record for ${record.staff_name}?`}
+            onConfirm={async () => {
+              const result = await deleteSalaryAction(record.id)
+              if (result?.error) toast.error(result.error)
+              else toast.success('Record deleted')
+            }}
+          />
+        </div>
       )
     },
   },

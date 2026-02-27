@@ -48,8 +48,9 @@ export async function createPurchaseAction(data: {
       discount: data.discount,
       tax: data.tax,
       total: data.total,
-      branch_id: branch?.id,
-      created_by: userProfile?.id,
+      status: 'received',
+      branch_id: branch?.id ?? null,
+      created_by: userProfile?.id ?? null,
     })
     .select('id')
     .single()
@@ -60,7 +61,11 @@ export async function createPurchaseAction(data: {
   const { error: itemsError } = await supabase.from('purchase_items').insert(
     data.items.map(item => ({ ...item, purchase_id: purchase.id }))
   )
-  if (itemsError) return { error: itemsError.message }
+  if (itemsError) {
+    // Rollback orphaned purchase header
+    await supabase.from('purchases').delete().eq('id', purchase.id)
+    return { error: `Failed to save purchase items: ${itemsError.message}` }
+  }
 
   // 3. Create stock batches — this is the critical stock update
   const { error: stockError } = await supabase.from('stock_batches').insert(
@@ -74,10 +79,16 @@ export async function createPurchaseAction(data: {
       initial_qty: item.total_qty,
       sold_qty: 0,
       available_qty: item.total_qty,
-      branch_id: branch?.id,
+      status: 'active',
+      branch_id: branch?.id ?? null,
     }))
   )
-  if (stockError) return { error: stockError.message }
+  if (stockError) {
+    // Rollback both header and items
+    await supabase.from('purchase_items').delete().eq('purchase_id', purchase.id)
+    await supabase.from('purchases').delete().eq('id', purchase.id)
+    return { error: `Failed to update stock: ${stockError.message}` }
+  }
 
   revalidatePath('/purchases')
   revalidatePath('/stock')
@@ -194,7 +205,7 @@ export async function bulkImportPurchasesAction(rows: BulkPurchaseRow[]): Promis
 export async function deletePurchaseAction(id: string) {
   const supabase = await createClient()
 
-  // Get associated stock batches to remove them
+  // 1. Remove stock batches created by this purchase
   const { error: stockError } = await supabase
     .from('stock_batches')
     .delete()
@@ -202,8 +213,13 @@ export async function deletePurchaseAction(id: string) {
 
   if (stockError) return { error: stockError.message }
 
+  // 2. Delete purchase line items (explicit cleanup regardless of DB cascade)
+  await supabase.from('purchase_items').delete().eq('purchase_id', id)
+
+  // 3. Delete purchase header
   const { error } = await supabase.from('purchases').delete().eq('id', id)
   if (error) return { error: error.message }
+
   revalidatePath('/purchases')
   revalidatePath('/stock')
   return { success: true }

@@ -117,7 +117,7 @@ export interface PurchaseItem {
 // ─── POS Bills ────────────────────────────────────────────────────────────────
 
 export type PaymentMethod = 'cash' | 'card' | 'upi' | 'credit'
-export type BillStatus = 'saved' | 'paid' | 'pending' | 'cancelled'
+export type BillStatus = 'saved' | 'synced' | 'sync_error'
 
 export interface PosBill {
   id: string

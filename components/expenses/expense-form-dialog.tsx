@@ -64,6 +64,7 @@ function ExpenseFormContent({ defaultValues, onSubmit, loading, onCancel }: {
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="upi">UPI</SelectItem>
                   <SelectItem value="card">Card</SelectItem>
+                  <SelectItem value="credit">Credit</SelectItem>
                 </SelectContent>
               </Select>
             </FormItem>

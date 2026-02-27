@@ -37,7 +37,7 @@ export function CategoryFormDialog() {
 
   async function onSubmit(values: FormValues) {
     setLoading(true)
-    const result = await createCategoryAction(values.name)
+    const result = await createCategoryAction({ name: values.name })
     setLoading(false)
     if (result?.error) {
       toast.error(result.error)
@@ -82,7 +82,7 @@ export function CategoryEditDialog({ category }: { category: MedicineCategory })
 
   async function onSubmit(values: FormValues) {
     setLoading(true)
-    const result = await updateCategoryAction(category.id, values.name)
+    const result = await updateCategoryAction(category.id, { name: values.name })
     setLoading(false)
     if (result?.error) {
       toast.error(result.error)

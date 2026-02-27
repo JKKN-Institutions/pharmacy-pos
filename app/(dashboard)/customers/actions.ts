@@ -35,6 +35,8 @@ export async function createCustomerAction(formData: FormData) {
   })
   if (error) return { error: error.message }
   revalidatePath('/customers')
+  revalidatePath('/accounts')
+  revalidatePath('/')
   return { success: true }
 }
 
@@ -52,13 +54,22 @@ export async function updateCustomerAction(id: string, formData: FormData) {
   }).eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/customers')
+  revalidatePath('/accounts')
+  revalidatePath('/')
   return { success: true }
 }
 
 export async function deleteCustomerAction(id: string) {
   const supabase = await createClient()
+
+  // Detach customer reference from invoices before deleting to avoid FK constraint failures
+  await supabase.from('invoices').update({ customer_id: null }).eq('customer_id', id)
+
   const { error } = await supabase.from('customers').delete().eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/customers')
+  revalidatePath('/accounts')
+  revalidatePath('/invoices')
+  revalidatePath('/')
   return { success: true }
 }

@@ -11,26 +11,33 @@ interface BillTotalsProps {
 
 export function BillTotals({ totals }: BillTotalsProps) {
   return (
-    <div className="border-t px-4 py-3 flex flex-col items-end gap-1 text-sm">
-      <div className="flex gap-8 text-muted-foreground">
-        <span>Subtotal:</span>
-        <span className="w-24 text-right">{formatINR(totals.subtotal)}</span>
-      </div>
-      {totals.discount_total > 0 && (
-        <div className="flex gap-8 text-green-600">
-          <span>Discount:</span>
-          <span className="w-24 text-right">- {formatINR(totals.discount_total)}</span>
+    <div className="border-t bg-muted/30 px-5 py-4">
+      <div className="flex justify-end">
+        <div className="w-56 space-y-1.5 text-sm">
+          <div className="flex justify-between text-muted-foreground">
+            <span>Subtotal</span>
+            <span className="tabular-nums">{formatINR(totals.subtotal)}</span>
+          </div>
+
+          {totals.discount_total > 0 && (
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+              <span>Discount</span>
+              <span className="tabular-nums">− {formatINR(totals.discount_total)}</span>
+            </div>
+          )}
+
+          {totals.tax_total > 0 && (
+            <div className="flex justify-between text-muted-foreground">
+              <span>Tax</span>
+              <span className="tabular-nums">+ {formatINR(totals.tax_total)}</span>
+            </div>
+          )}
+
+          <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
+            <span>Total</span>
+            <span className="tabular-nums text-primary">{formatINR(totals.total)}</span>
+          </div>
         </div>
-      )}
-      {totals.tax_total > 0 && (
-        <div className="flex gap-8 text-muted-foreground">
-          <span>Tax:</span>
-          <span className="w-24 text-right">{formatINR(totals.tax_total)}</span>
-        </div>
-      )}
-      <div className="flex gap-8 font-bold text-base border-t pt-2 mt-1">
-        <span>Total:</span>
-        <span className="w-24 text-right">{formatINR(totals.total)}</span>
       </div>
     </div>
   )

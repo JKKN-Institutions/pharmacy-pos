@@ -1,45 +1,45 @@
 import { StatsCard } from '@/components/ui/stats-card'
-import { ShoppingCart, TrendingUp, DollarSign, Package, AlertTriangle } from 'lucide-react'
+import { TrendingUp, Receipt, Users, ShoppingBag } from 'lucide-react'
 import { formatINR } from '@/lib/utils/currency'
 
 interface KpiCardsProps {
+  totalIncome: number
+  totalExpenses: number
+  totalSalary: number
+  totalPurchase: number
   todaySales: number
-  totalSales: number
-  monthExpenses: number
-  medicineCount: number
-  lowStockCount: number
 }
 
-export function KpiCards({ todaySales, totalSales, monthExpenses, medicineCount, lowStockCount }: KpiCardsProps) {
+export function KpiCards({ totalIncome, totalExpenses, totalSalary, totalPurchase, todaySales }: KpiCardsProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
       <StatsCard
-        title="Today's Sales"
-        value={formatINR(todaySales)}
-        description="POS bills today"
-        icon={ShoppingCart}
-        iconClassName="bg-blue-100 dark:bg-blue-900/30"
-      />
-      <StatsCard
-        title="Total Revenue"
-        value={formatINR(totalSales)}
-        description="All time POS sales"
+        title="Income"
+        value={formatINR(totalIncome)}
+        description={`Today: ${formatINR(todaySales)}`}
         icon={TrendingUp}
-        iconClassName="bg-green-100 dark:bg-green-900/30"
+        iconClassName="bg-green-50 dark:bg-green-950/50"
       />
       <StatsCard
-        title="Month Expenses"
-        value={formatINR(monthExpenses)}
-        description="This month"
-        icon={DollarSign}
-        iconClassName="bg-amber-100 dark:bg-amber-900/30"
+        title="Expenses"
+        value={formatINR(totalExpenses)}
+        description="All-time operational"
+        icon={Receipt}
+        iconClassName="bg-red-50 dark:bg-red-950/50"
       />
       <StatsCard
-        title="Medicines"
-        value={medicineCount}
-        description={`${lowStockCount} low stock`}
-        icon={lowStockCount > 0 ? AlertTriangle : Package}
-        iconClassName={lowStockCount > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-purple-100 dark:bg-purple-900/30'}
+        title="Salary Expenses"
+        value={formatINR(totalSalary)}
+        description="All-time payroll"
+        icon={Users}
+        iconClassName="bg-amber-50 dark:bg-amber-950/50"
+      />
+      <StatsCard
+        title="Purchase Total"
+        value={formatINR(totalPurchase)}
+        description="All-time procurement"
+        icon={ShoppingBag}
+        iconClassName="bg-blue-50 dark:bg-blue-950/50"
       />
     </div>
   )

@@ -3,6 +3,16 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
+export async function getPharmacySettingsAction(): Promise<Record<string, string>> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('system_settings')
+    .select('key, value')
+    .in('key', ['store_name', 'store_address', 'store_phone', 'store_gstin', 'store_dl', 'invoice_footer'])
+  if (!data) return {}
+  return Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]))
+}
+
 export async function getBillItemsAction(billId: string) {
   if (!billId) return { data: null, error: 'Bill ID is required' }
   const supabase = await createClient()

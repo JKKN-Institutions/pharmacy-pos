@@ -7,11 +7,13 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { getBillItemsAction } from './actions'
 import { formatINR } from '@/lib/utils/currency'
+import { DownloadBillButton } from '@/components/pos/download-bill-button'
 import type { PosBill } from '@/lib/types/database'
 
 type BillItem = {
@@ -179,6 +181,9 @@ export function BillViewDialog({ bill }: BillViewDialogProps) {
               <span className="tabular-nums">{formatINR(bill.total)}</span>
             </div>
           </div>
+          <DialogFooter className="pt-2">
+            <DownloadBillButton bill={bill} showLabel variant="outline" />
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

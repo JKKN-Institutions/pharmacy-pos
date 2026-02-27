@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { formatINR } from '@/lib/utils/currency'
 import type { PosBill } from '@/lib/types/database'
 import { BillViewDialog } from './bill-view-dialog'
+import { DownloadBillButton } from '@/components/pos/download-bill-button'
 
 const statusStyles: Record<string, string> = {
   saved:      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -96,6 +97,7 @@ export const billColumns: ColumnDef<PosBill>[] = [
       return (
         <div className="flex items-center gap-1">
           <BillViewDialog bill={bill} />
+          <DownloadBillButton bill={bill} />
           <ConfirmDialog
             title="Delete bill?"
             description={`Permanently delete bill ${bill.bill_no}? This cannot be undone.`}

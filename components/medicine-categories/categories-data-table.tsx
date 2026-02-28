@@ -155,6 +155,7 @@ export function CategoriesDataTable({ columns, data }: CategoriesDataTableProps)
 
       {/* Table */}
       <div className="rounded-xl border border-border shadow-sm overflow-hidden bg-card">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map(headerGroup => (
@@ -201,10 +202,11 @@ export function CategoriesDataTable({ columns, data }: CategoriesDataTableProps)
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
         <p className="text-sm text-muted-foreground">
           {totalRows === 0
             ? 'No categories'

@@ -19,8 +19,8 @@ const metrics: {
   color: string
   bg: string
 }[] = [
-  { key: 'totalIncome',   label: 'Total Income',   icon: TrendingUp,   color: 'text-green-600 dark:text-green-400',   bg: 'bg-green-50 dark:bg-green-950/30' },
-  { key: 'totalTax',      label: 'Total Tax',       icon: Receipt,      color: 'text-blue-600 dark:text-blue-400',    bg: 'bg-blue-50 dark:bg-blue-950/30' },
+  { key: 'totalIncome',   label: 'Total Income',   icon: TrendingUp,   color: 'text-green-600 dark:text-green-400',     bg: 'bg-green-50 dark:bg-green-950/30' },
+  { key: 'totalTax',      label: 'Total Tax',       icon: Receipt,      color: 'text-green-600 dark:text-green-400',    bg: 'bg-green-50 dark:bg-green-950/30' },
   { key: 'totalPaid',     label: 'Paid',            icon: Wallet,       color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
   { key: 'totalDue',      label: 'Due Amount',      icon: AlertCircle,  color: 'text-red-600 dark:text-red-400',      bg: 'bg-red-50 dark:bg-red-950/30' },
   { key: 'totalDiscount', label: 'Total Discount',  icon: Tag,          color: 'text-amber-600 dark:text-amber-400',  bg: 'bg-amber-50 dark:bg-amber-950/30' },
@@ -32,7 +32,7 @@ export function FinancialSummary(props: FinancialSummaryProps) {
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {metrics.map(({ key, label, icon: Icon, color, bg }) => (
         <Card key={key} className="rounded-xl border shadow-sm">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className={`w-8 h-8 rounded-lg ${bg} flex items-center justify-center mb-2`}>
               <Icon className={`w-4 h-4 ${color}`} />
             </div>

@@ -66,7 +66,7 @@ export default async function AccountsPage() {
     <div className="space-y-8">
       <PageHeader title="Accounts / Credit Ledger" description="Customer credit invoices and outstanding balances" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryCard icon={<BookOpen className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />} iconBg="bg-indigo-100 dark:bg-indigo-900/30" label="Total Invoiced" value={formatINR(totalInvoicedAmt)} />
+        <SummaryCard icon={<BookOpen className="w-5 h-5 text-green-600 dark:text-green-400" />} iconBg="bg-green-100 dark:bg-green-900/30" label="Total Invoiced" value={formatINR(totalInvoicedAmt)} />
         <SummaryCard icon={<TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />} iconBg="bg-green-100 dark:bg-green-900/30" label="Total Collected" value={formatINR(totalCollected)} />
         <SummaryCard icon={<AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />} iconBg="bg-red-100 dark:bg-red-900/30" label="Outstanding Balance" value={formatINR(totalOutstanding)} valueClass="text-red-600 dark:text-red-400" />
         <SummaryCard icon={<Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />} iconBg="bg-amber-100 dark:bg-amber-900/30" label="Customers with Dues" value={String(customersWithDues)} />
@@ -121,13 +121,13 @@ export default async function AccountsPage() {
             <p className="text-2xl font-bold tabular-nums text-red-700 dark:text-red-300">{formatINR(expensesToday)}</p>
             <div className="mt-2 text-xs text-red-600/80 dark:text-red-400/70"><div className="flex justify-between"><span>Expenses</span><span className="font-medium">{formatINR(expensesToday)}</span></div></div>
           </div>
-          <div className={netCash >= 0 ? "rounded-xl border p-4 bg-blue-50 dark:bg-blue-900/10" : "rounded-xl border p-4 bg-amber-50 dark:bg-amber-900/10"}>
+          <div className={netCash >= 0 ? "rounded-xl border p-4 bg-green-50 dark:bg-green-900/10" : "rounded-xl border p-4 bg-amber-50 dark:bg-amber-900/10"}>
             <div className="flex items-center gap-2 mb-2">
-              <BookOpen className={netCash >= 0 ? "w-4 h-4 text-blue-600 dark:text-blue-400" : "w-4 h-4 text-amber-600 dark:text-amber-400"} />
-              <span className={netCash >= 0 ? "text-sm font-medium text-blue-700 dark:text-blue-300" : "text-sm font-medium text-amber-700 dark:text-amber-300"}>Net Cash</span>
+              <BookOpen className={netCash >= 0 ? "w-4 h-4 text-green-600 dark:text-green-400" : "w-4 h-4 text-amber-600 dark:text-amber-400"} />
+              <span className={netCash >= 0 ? "text-sm font-medium text-green-700 dark:text-green-300" : "text-sm font-medium text-amber-700 dark:text-amber-300"}>Net Cash</span>
             </div>
-            <p className={netCash >= 0 ? "text-2xl font-bold tabular-nums text-blue-700 dark:text-blue-300" : "text-2xl font-bold tabular-nums text-amber-700 dark:text-amber-300"}>{formatINR(netCash)}</p>
-            <div className={netCash >= 0 ? "mt-2 text-xs text-blue-600/80 dark:text-blue-400/70" : "mt-2 text-xs text-amber-600/80 dark:text-amber-400/70"}>
+            <p className={netCash >= 0 ? "text-2xl font-bold tabular-nums text-green-700 dark:text-green-300" : "text-2xl font-bold tabular-nums text-amber-700 dark:text-amber-300"}>{formatINR(netCash)}</p>
+            <div className={netCash >= 0 ? "mt-2 text-xs text-green-600/80 dark:text-green-400/70" : "mt-2 text-xs text-amber-600/80 dark:text-amber-400/70"}>
               <div className="flex justify-between"><span>Inflow minus Outflow</span><span className="font-medium">{netCash >= 0 ? 'Surplus' : 'Deficit'}</span></div>
             </div>
           </div>

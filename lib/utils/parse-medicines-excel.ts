@@ -22,6 +22,12 @@ export interface ParsedMedicineRow {
  *
  * Pattern: full text = A + ' ' + A, so A = text.slice(0, (len-1)/2)
  */
+/** Converts "BELT", "belt", "NEBULIZER" → "Belt", "Belt", "Nebulizer".
+ *  Applied to the unit field so ALL-CAPS exports from legacy systems pass validation. */
+function toTitleCase(s: string): string {
+  return s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+}
+
 function fixDuplicatedName(text: string): string {
   const t = text.trim()
   if (t.length < 3) return t
@@ -150,7 +156,7 @@ export function parseMedicinesFile(
       name,
       company: r['company'] ?? null,
       generic_name,
-      unit: r['unit'] ?? null,
+      unit: r['unit'] ? toTitleCase(r['unit']) : null,
       unit_packing: r['unit/packing'] ?? r['unit_packing'] ?? null,
       category: r['category'] ?? null,
       store_location: r['storebox'] ?? r['store_location'] ?? null,

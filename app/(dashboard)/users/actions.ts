@@ -53,7 +53,11 @@ export async function createUserAction(formData: FormData) {
     branch_id: branchData?.id ?? null,
   })
 
-  if (profileError) return { error: profileError.message }
+  if (profileError) {
+    // Rollback: remove the auth user so the email doesn't become a ghost entry
+    await adminClient.auth.admin.deleteUser(authData.user.id)
+    return { error: profileError.message }
+  }
 
   revalidatePath('/users')
   return { success: true }
@@ -107,11 +111,29 @@ export async function toggleUserStatusAction(id: string, is_active: boolean) {
 
 export async function deleteUserAction(id: string) {
   const supabase = await createClient()
-  const { error } = await supabase
+  const adminClient = createAdminClient()
+
+  // Fetch auth_user_id before deleting the profile row
+  const { data: profile, error: fetchError } = await supabase
+    .from('user_profiles')
+    .select('auth_user_id')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) return { error: fetchError.message }
+
+  const { error: profileError } = await supabase
     .from('user_profiles')
     .delete()
     .eq('id', id)
-  if (error) return { error: error.message }
+
+  if (profileError) return { error: profileError.message }
+
+  // Also delete from auth.users so the email is freed for future registration
+  if (profile?.auth_user_id) {
+    await adminClient.auth.admin.deleteUser(profile.auth_user_id)
+  }
+
   revalidatePath('/users')
   return { success: true }
 }

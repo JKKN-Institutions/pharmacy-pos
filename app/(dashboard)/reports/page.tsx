@@ -7,8 +7,8 @@ import {
 } from 'lucide-react'
 
 const reports = [
-  { href: '/reports/pos-bill', title: 'POS / Bill Report', description: 'All counter sales with payment details', icon: ShoppingCart, color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
-  { href: '/reports/invoice', title: 'Invoice Report', description: 'Credit invoices with payment status', icon: FileText, color: 'text-indigo-600 bg-indigo-100 dark:bg-indigo-900/30' },
+  { href: '/reports/pos-bill', title: 'POS / Bill Report', description: 'All counter sales with payment details', icon: ShoppingCart, color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
+  { href: '/reports/invoice', title: 'Invoice Report', description: 'Credit invoices with payment status', icon: FileText, color: 'text-green-600 bg-green-100 dark:bg-green-900/30' },
   { href: '/reports/purchase', title: 'Purchase Report', description: 'Stock purchases from suppliers', icon: ClipboardList, color: 'text-violet-600 bg-violet-100 dark:bg-violet-900/30' },
   { href: '/reports/inventory', title: 'Inventory Report', description: 'Current stock batches and values', icon: Archive, color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
   { href: '/reports/out-of-stock', title: 'Out of Stock', description: 'Medicines below reorder level', icon: AlertTriangle, color: 'text-red-600 bg-red-100 dark:bg-red-900/30' },

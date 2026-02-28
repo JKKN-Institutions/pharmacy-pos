@@ -54,9 +54,9 @@ function SupplierForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField control={form.control} name="name" render={({ field }) => (
-            <FormItem className="col-span-2">
+            <FormItem className="sm:col-span-2">
               <FormLabel>Supplier Name *</FormLabel>
               <FormControl><Input placeholder="ABC Pharma Distributors" {...field} /></FormControl>
               <FormMessage />
@@ -77,14 +77,14 @@ function SupplierForm({
             </FormItem>
           )} />
           <FormField control={form.control} name="email" render={({ field }) => (
-            <FormItem className="col-span-2">
+            <FormItem className="sm:col-span-2">
               <FormLabel>Email</FormLabel>
               <FormControl><Input type="email" placeholder="supplier@email.com" {...field} /></FormControl>
               <FormMessage />
             </FormItem>
           )} />
           <FormField control={form.control} name="address" render={({ field }) => (
-            <FormItem className="col-span-2">
+            <FormItem className="sm:col-span-2">
               <FormLabel>Address</FormLabel>
               <FormControl><Input placeholder="Street address" {...field} /></FormControl>
               <FormMessage />
@@ -105,7 +105,7 @@ function SupplierForm({
             </FormItem>
           )} />
         </div>
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
           <Button type="submit" className="flex-1" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button>
         </div>

@@ -28,7 +28,7 @@ export default async function MedicineCategoriesPage() {
   const withMeds  = categories.filter(c => c.medicine_count > 0).length
 
   const stats = [
-    { label: 'Total',           value: total,    icon: Tag,          iconClass: 'bg-blue-50   dark:bg-blue-950/50   text-blue-600   dark:text-blue-400' },
+    { label: 'Total',           value: total,    icon: Tag,          iconClass: 'bg-green-50   dark:bg-green-950/50   text-green-600   dark:text-green-400' },
     { label: 'Active',          value: active,   icon: CheckCircle2, iconClass: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' },
     { label: 'Inactive',        value: inactive, icon: XCircle,      iconClass: 'bg-red-50    dark:bg-red-950/50    text-red-600    dark:text-red-400' },
     { label: 'With Medicines',  value: withMeds, icon: Pill,         iconClass: 'bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400' },

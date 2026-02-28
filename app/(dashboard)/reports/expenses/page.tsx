@@ -21,7 +21,7 @@ type ExpenseRow = {
 
 const methodColors: Record<string, string> = {
   cash: 'bg-green-100 text-green-700 dark:bg-green-900/30',
-  upi: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30',
+  upi: 'bg-green-100 text-green-700 dark:bg-green-900/30',
   card: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30',
   credit: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30',
 }

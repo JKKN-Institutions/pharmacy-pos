@@ -38,9 +38,9 @@ function ExpenseFormContent({ defaultValues, onSubmit, loading, onCancel }: {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField control={form.control} name="name" render={({ field }) => (
-            <FormItem className="col-span-2"><FormLabel>Expense Name *</FormLabel><FormControl><Input placeholder="e.g. Monthly Rent" {...field} /></FormControl><FormMessage /></FormItem>
+            <FormItem className="sm:col-span-2"><FormLabel>Expense Name *</FormLabel><FormControl><Input placeholder="e.g. Monthly Rent" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="expense_type" render={({ field }) => (
             <FormItem>
@@ -73,10 +73,10 @@ function ExpenseFormContent({ defaultValues, onSubmit, loading, onCancel }: {
             <FormItem><FormLabel>Date *</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
           )} />
           <FormField control={form.control} name="description" render={({ field }) => (
-            <FormItem className="col-span-2"><FormLabel>Description</FormLabel><FormControl><Input placeholder="Optional notes" {...field} /></FormControl></FormItem>
+            <FormItem className="sm:col-span-2"><FormLabel>Description</FormLabel><FormControl><Input placeholder="Optional notes" {...field} /></FormControl></FormItem>
           )} />
         </div>
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
           <Button type="submit" className="flex-1" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button>
         </div>

@@ -41,7 +41,6 @@ import { cn } from '@/lib/utils'
 import { createPurchaseAction } from '@/app/(dashboard)/purchases/actions'
 import { calculateLineItem } from '@/lib/utils/billing'
 import { formatINR } from '@/lib/utils/currency'
-import { useMemo } from 'react'
 
 const itemSchema = z.object({
   medicine_id: z.string().min(1, 'Select a medicine'),
@@ -182,16 +181,14 @@ export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
   const watchedItems = form.watch('items')
 
   // ── Summary totals ────────────────────────────────────────────────────────
-  // Sum the stored breakdown values (set by recalcItem via form.getValues()).
-  // This avoids the race condition where watchedItems.purchase_price lags behind
-  // the just-typed value while form.setValue('price') already fired a re-render.
-  const totals = useMemo(() => {
-    const subtotal     = watchedItems.reduce((s, i) => s + (i.item_subtotal || 0), 0)
-    const discountTotal = watchedItems.reduce((s, i) => s + (i.item_discount || 0), 0)
-    const taxTotal     = watchedItems.reduce((s, i) => s + (i.item_tax     || 0), 0)
-    const total        = watchedItems.reduce((s, i) => s + (i.price        || 0), 0)
-    return { subtotal, discount_total: discountTotal, tax_total: taxTotal, total }
-  }, [watchedItems])
+  // Computed inline (not via useMemo) so they always reflect the current render.
+  // useMemo([watchedItems]) would stay stale because RHF can return the same
+  // array *reference* with mutated contents after form.setValue() calls.
+  const subtotal      = watchedItems.reduce((s, i) => s + (i.item_subtotal || 0), 0)
+  const discountTotal = watchedItems.reduce((s, i) => s + (i.item_discount || 0), 0)
+  const taxTotal      = watchedItems.reduce((s, i) => s + (i.item_tax      || 0), 0)
+  const grandTotal    = watchedItems.reduce((s, i) => s + (i.price         || 0), 0)
+  const totals = { subtotal, discount_total: discountTotal, tax_total: taxTotal, total: grandTotal }
 
   async function onSubmit(values: FormValues) {
     const result = await createPurchaseAction({
@@ -309,7 +306,7 @@ export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
                 </div>
 
                 {/* Row 2: Qty inputs + Price inputs + Row total */}
-                <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">
                   <FormField control={form.control} name={`items.${index}.packing_qty`} render={({ field }) => (
                     <FormItem>
                       <FormLabel>Pack Qty</FormLabel>
@@ -386,6 +383,51 @@ export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
                       </Button>
                     )}
                   </div>
+                </div>
+
+                {/* Row 3: Discount — type toggle + value input */}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  <FormField control={form.control} name={`items.${index}.discount_type`} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Discount Type</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={v => { field.onChange(v); recalcItem(index) }}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="percent">% Percent</SelectItem>
+                          <SelectItem value="flat">₹ Flat</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name={`items.${index}.discount_value`} render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Discount {watchedItems[index]?.discount_type === 'flat' ? '₹' : '%'}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0"
+                          {...field}
+                          onChange={e => { field.onChange(e); recalcItem(index) }}
+                        />
+                      </FormControl>
+                      {(watchedItems[index]?.item_discount ?? 0) > 0 && (
+                        <p className="text-xs text-green-600 leading-none">
+                          − {formatINR(watchedItems[index]?.item_discount ?? 0)} off
+                        </p>
+                      )}
+                    </FormItem>
+                  )} />
                 </div>
 
               </div>

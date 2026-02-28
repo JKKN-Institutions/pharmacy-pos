@@ -10,7 +10,7 @@ interface RevenueChartProps {
 }
 
 const chartConfig = {
-  pos:     { label: 'POS Bills', color: 'hsl(221 83% 53%)' },
+  pos:     { label: 'POS Bills', color: 'hsl(142 71% 45%)' },
   invoice: { label: 'Invoices',  color: 'hsl(142 71% 45%)' },
 } satisfies ChartConfig
 

@@ -156,7 +156,7 @@ export function UserFormDialog() {
                 </FormItem>
               )}
             />
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
                 Cancel
               </Button>

@@ -82,7 +82,7 @@ export function SalaryFormDialog() {
             <FormField control={form.control} name="note" render={({ field }) => (
               <FormItem><FormLabel>Note</FormLabel><FormControl><Input placeholder="Optional note" {...field} /></FormControl></FormItem>
             )} />
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" className="flex-1" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button>
             </div>
@@ -153,7 +153,7 @@ export function SalaryEditDialog({ record }: { record: SalaryRecord }) {
             <FormField control={form.control} name="note" render={({ field }) => (
               <FormItem><FormLabel>Note</FormLabel><FormControl><Input placeholder="Optional note" {...field} /></FormControl></FormItem>
             )} />
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" className="flex-1" disabled={loading}>{loading ? 'Saving...' : 'Update'}</Button>
             </div>

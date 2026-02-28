@@ -97,9 +97,9 @@ export function InvoiceForm({ customers }: { customers: Pick<Customer, 'id' | 'f
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader><CardTitle className="text-base">Invoice Details</CardTitle></CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <FormField control={form.control} name="customer_id" render={({ field }) => (
-              <FormItem className="col-span-2">
+              <FormItem className="sm:col-span-2">
                 <FormLabel>Customer</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select customer (optional)" /></SelectTrigger></FormControl>
@@ -169,34 +169,34 @@ export function InvoiceForm({ customers }: { customers: Pick<Customer, 'id' | 'f
           </CardHeader>
           <CardContent className="space-y-3">
             {fields.map((field, index) => (
-              <div key={field.id} className="grid grid-cols-12 gap-2 items-start p-3 border rounded-lg bg-muted/20">
-                <div className="col-span-4">
+              <div key={field.id} className="grid grid-cols-2 gap-2 items-start p-3 border rounded-lg bg-muted/20 sm:grid-cols-12">
+                <div className="col-span-2 sm:col-span-4">
                   <FormField control={form.control} name={`items.${index}.item_name`} render={({ field }) => (
                     <FormItem><FormLabel className="text-xs">Item Name *</FormLabel><FormControl><Input placeholder="Medicine/Service name" {...field} /></FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2">
                   <FormField control={form.control} name={`items.${index}.qty`} render={({ field }) => (
                     <FormItem><FormLabel className="text-xs">Qty</FormLabel><FormControl><Input type="number" min="1" {...field} /></FormControl></FormItem>
                   )} />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2">
                   <FormField control={form.control} name={`items.${index}.unit_cost`} render={({ field }) => (
                     <FormItem><FormLabel className="text-xs">Unit Rate &#8377;</FormLabel><FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl></FormItem>
                   )} />
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-1 sm:col-span-2">
                   <FormField control={form.control} name={`items.${index}.discount_value`} render={({ field }) => (
                     <FormItem><FormLabel className="text-xs">Discount %</FormLabel><FormControl><Input type="number" step="0.01" min="0" {...field} /></FormControl></FormItem>
                   )} />
                 </div>
-                <div className="col-span-1 flex items-end h-full pb-0.5">
+                <div className="col-span-1 sm:col-span-1 flex items-end h-full pb-0.5">
                   <div>
                     <p className="text-xs text-muted-foreground mb-1">Total</p>
                     <p className="text-sm font-semibold">{formatINR(lineItems[index]?.price ?? 0)}</p>
                   </div>
                 </div>
-                <div className="col-span-1 flex items-end justify-end h-full pb-0.5">
+                <div className="col-span-2 sm:col-span-1 flex items-end justify-end h-full pb-0.5">
                   {fields.length > 1 && (
                     <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(index)}>
                       <Trash2 className="h-4 w-4" />
@@ -208,8 +208,8 @@ export function InvoiceForm({ customers }: { customers: Pick<Customer, 'id' | 'f
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <div className="space-y-1 text-sm w-64">
+        <div className="flex justify-end px-2">
+          <div className="space-y-1 text-sm w-full sm:w-64">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{formatINR(totals.subtotal)}</span></div>
             <div className="flex justify-between text-green-600"><span>Discount</span><span>- {formatINR(totals.discount_total)}</span></div>
             <div className="flex justify-between border-t pt-1 font-bold text-base"><span>Total</span><span>{formatINR(totals.total)}</span></div>

@@ -269,16 +269,16 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     <div className="space-y-4">
 
       {/* ── Filter + Export toolbar ──────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
 
         {/* Search */}
-        <div className="relative">
+        <div className="relative w-full sm:w-60">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search bill no / customer..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 w-60"
+            className="pl-9 h-9 w-full"
           />
           {search && (
             <button
@@ -292,7 +292,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
 
         {/* Status — shadcn Select */}
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 w-36">
+          <SelectTrigger className="h-9 w-full sm:w-36">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -306,7 +306,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
 
         {/* Payment — shadcn Select */}
         <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-          <SelectTrigger className="h-9 w-36">
+          <SelectTrigger className="h-9 w-full sm:w-36">
             <SelectValue placeholder="Payment" />
           </SelectTrigger>
           <SelectContent>
@@ -324,7 +324,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
             <Button
               variant="outline"
               className={cn(
-                'h-9 w-60 justify-start gap-2 font-normal',
+                'h-9 w-full sm:w-60 justify-start gap-2 font-normal',
                 !dateRange?.from && 'text-muted-foreground'
               )}
             >
@@ -400,6 +400,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-border shadow-sm overflow-hidden bg-card">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -451,10 +452,11 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* ── Pagination ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between px-1">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
         <p className="text-sm text-muted-foreground">
           {totalRows === 0
             ? 'No records'

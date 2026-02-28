@@ -86,7 +86,7 @@ export function ConflictsStep({
                 <TableRow
                   key={c.raw_row}
                   className={`border-b border-border/40 transition-colors
-                    ${action === 'overwrite' ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''}
+                    ${action === 'overwrite' ? 'bg-green-50/40 dark:bg-green-950/20' : ''}
                   `}
                 >
                   <TableCell className="text-xs text-muted-foreground pl-6">

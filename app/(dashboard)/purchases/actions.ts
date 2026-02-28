@@ -57,9 +57,25 @@ export async function createPurchaseAction(data: {
 
   if (purchaseError) return { error: purchaseError.message }
 
-  // 2. Create purchase line items
+  // 2. Create purchase line items — only send columns that exist in the DB table.
+  // (The form item object also carries computed-only fields like item_subtotal /
+  //  item_discount / item_tax which must NOT be forwarded to Supabase.)
   const { error: itemsError } = await supabase.from('purchase_items').insert(
-    data.items.map(item => ({ ...item, purchase_id: purchase.id }))
+    data.items.map(item => ({
+      purchase_id:    purchase.id,
+      medicine_id:    item.medicine_id,
+      batch_no:       item.batch_no,
+      expiry_date:    item.expiry_date,
+      packing_qty:    item.packing_qty,
+      quantity:       item.quantity,
+      total_qty:      item.total_qty,
+      purchase_price: item.purchase_price,
+      sale_price:     item.sale_price,
+      discount_type:  item.discount_type,
+      discount_value: item.discount_value,
+      tax:            item.tax,
+      price:          item.price,
+    }))
   )
   if (itemsError) {
     // Rollback orphaned purchase header

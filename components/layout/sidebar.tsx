@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
 import {
   Sidebar,
   SidebarContent,
@@ -65,12 +66,29 @@ const financeItems: NavItem[] = [
   { href: '/reports',  icon: BarChart3,  label: 'Reports',  roles: ['admin', 'manager'] },
 ]
 
-// Settings sub-items — each has its own role list
 const settingsSubItems: SettingsSubItem[] = [
   { href: '/medicine-categories', icon: Tag,     label: 'Medicine Categories', roles: ['admin', 'manager', 'pharmacist'] },
   { href: '/settings/taxes',      icon: Percent, label: 'Tax Rates',           roles: ['admin'] },
   { href: '/settings',            icon: Settings,label: 'General',             roles: ['admin'] },
 ]
+
+/** Adaptive icon box — bg uses currentColor so it stays subtle on white
+ *  and becomes a faint white tint when the button turns green on hover/active */
+function NavItemIcon({ icon: Icon }: { icon: React.ElementType }) {
+  return (
+    <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-current/[0.08] transition-colors duration-150">
+      <Icon className="size-3.5" />
+    </span>
+  )
+}
+
+function GroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/35 px-3 mb-0.5">
+      {children}
+    </SidebarGroupLabel>
+  )
+}
 
 function NavGroup({
   label,
@@ -87,20 +105,23 @@ function NavGroup({
   if (visible.length === 0) return null
 
   return (
-    <SidebarGroup>
-      {label && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
+    <SidebarGroup className="py-1">
+      {label && <GroupLabel>{label}</GroupLabel>}
       <SidebarGroupContent>
         <SidebarMenu>
           {visible.map(item => (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))}
+                isActive={
+                  pathname === item.href ||
+                  (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'))
+                }
                 tooltip={item.label}
               >
                 <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.label}</span>
+                  <NavItemIcon icon={item.icon} />
+                  <span className="font-medium">{item.label}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -114,7 +135,6 @@ function NavGroup({
 function AdminGroup({ userRole, pathname }: { userRole: string; pathname: string }) {
   const visibleSubItems = settingsSubItems.filter(i => i.roles.includes(userRole))
 
-  // Show this group if: admin (always — has Users + Settings), or any role with ≥1 settings sub-item
   const showUsers    = userRole === 'admin'
   const showSettings = visibleSubItems.length > 0
 
@@ -126,8 +146,8 @@ function AdminGroup({ userRole, pathname }: { userRole: string; pathname: string
     pathname === '/medicine-categories'
 
   return (
-    <SidebarGroup>
-      {showUsers && <SidebarGroupLabel>Admin</SidebarGroupLabel>}
+    <SidebarGroup className="py-1">
+      {showUsers && <GroupLabel>Admin</GroupLabel>}
       <SidebarGroupContent>
         <SidebarMenu>
 
@@ -140,14 +160,14 @@ function AdminGroup({ userRole, pathname }: { userRole: string; pathname: string
                 tooltip="Users"
               >
                 <Link href="/users">
-                  <UserCog />
-                  <span>Users</span>
+                  <NavItemIcon icon={UserCog} />
+                  <span className="font-medium">Users</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
 
-          {/* Settings — collapsible, visible to any role with sub-items */}
+          {/* Settings collapsible */}
           {showSettings && (
             <Collapsible
               asChild
@@ -157,9 +177,9 @@ function AdminGroup({ userRole, pathname }: { userRole: string; pathname: string
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton isActive={isSettingsActive} tooltip="Settings">
-                    <Settings />
-                    <span>Settings</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    <NavItemIcon icon={Settings} />
+                    <span className="font-medium">Settings</span>
+                    <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
 
@@ -175,7 +195,7 @@ function AdminGroup({ userRole, pathname }: { userRole: string; pathname: string
                           }
                         >
                           <Link href={sub.href}>
-                            <sub.icon />
+                            <sub.icon className="size-3.5 shrink-0" />
                             <span>{sub.label}</span>
                           </Link>
                         </SidebarMenuSubButton>
@@ -198,17 +218,24 @@ export function AppSidebar({ userRole }: { userRole: string }) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
+
+      {/* ── Header: Brand ── */}
+      <SidebarHeader className="border-b border-sidebar-border pb-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="PharmaPOS">
               <Link href="/dashboard">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-amber-500 text-white shrink-0">
-                  <Pill className="size-4" />
+                {/* Green gradient pill icon */}
+                <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-700 text-white shadow-sm shadow-green-600/20">
+                  <Pill className="size-5" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold text-sm">PharmaPOS</span>
-                  <span className="text-xs text-sidebar-foreground/60">Pharmacy Manager</span>
+                  <span className="font-bold tracking-tight text-sm">PharmaPOS</span>
+                  <span className="flex items-center gap-1.5 text-[11px] text-sidebar-foreground/50">
+                    {/* Online status dot */}
+                    <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                    Pharmacy Manager
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -216,17 +243,26 @@ export function AppSidebar({ userRole }: { userRole: string }) {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-x-hidden scrollbar-hidden scroll-smooth">
+      {/* ── Navigation ── */}
+      <SidebarContent className="overflow-x-hidden scrollbar-hidden scroll-smooth py-2">
         <NavGroup items={mainNavItems} userRole={userRole} pathname={pathname} />
-        <SidebarSeparator />
+        <SidebarSeparator className="mx-3 my-1 opacity-50" />
         <NavGroup label="Inventory" items={inventoryItems} userRole={userRole} pathname={pathname} />
-        <SidebarSeparator />
+        <SidebarSeparator className="mx-3 my-1 opacity-50" />
         <NavGroup label="Finance"   items={financeItems}   userRole={userRole} pathname={pathname} />
-        <SidebarSeparator />
+        <SidebarSeparator className="mx-3 my-1 opacity-50" />
         <AdminGroup userRole={userRole} pathname={pathname} />
       </SidebarContent>
 
-      <SidebarFooter />
+      {/* ── Footer: App version ── */}
+      <SidebarFooter className="border-t border-sidebar-border py-3">
+        <div className="px-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-sidebar-foreground/25">
+            PharmaPOS &middot; v2.0
+          </p>
+        </div>
+      </SidebarFooter>
+
       <SidebarRail />
     </Sidebar>
   )

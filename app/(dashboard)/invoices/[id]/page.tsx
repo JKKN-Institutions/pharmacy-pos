@@ -17,7 +17,7 @@ const paymentStatusColors: Record<string, string> = {
 
 const invoiceStatusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
-  sent: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30',
+  sent: 'bg-green-100 text-green-700 dark:bg-green-900/30',
   paid: 'bg-green-100 text-green-700 dark:bg-green-900/30',
 }
 

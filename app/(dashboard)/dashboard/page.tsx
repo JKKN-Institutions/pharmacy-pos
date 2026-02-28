@@ -37,9 +37,9 @@ function shortMonth(yyyyMM: string): string {
 
 function KpiSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <Skeleton key={i} className="h-[112px] rounded-xl" />
+        <Skeleton key={i} className="h-[100px] sm:h-[112px] rounded-xl" />
       ))}
     </div>
   )
@@ -69,7 +69,7 @@ export default async function DashboardPage() {
       </Suspense>
 
       {/* Revenue (12-month stacked) + Stock Alerts */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Suspense fallback={<ChartSkeleton />}>
             <RevenueChartServer />
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Expenses Line Chart + Expense by Type Donut */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
         <Suspense fallback={<SmallChartSkeleton />}>
           <ExpensesChartServer />
         </Suspense>
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Salary Bar + Purchase Area + Customer Bar */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Suspense fallback={<SmallChartSkeleton />}>
           <SalaryChartServer />
         </Suspense>

@@ -76,7 +76,7 @@ function LoginForm() {
         <Button
           onClick={handleGoogleLogin}
           disabled={loading}
-          className="btn-shimmer cursor-pointer w-full h-12 gap-3 text-sm font-semibold bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white transition-all duration-200 shadow-md hover:shadow-lg rounded-xl disabled:opacity-80 disabled:cursor-not-allowed"
+          className="btn-shimmer cursor-pointer w-full h-12 gap-3 text-sm font-semibold bg-green-600 hover:bg-green-700 active:scale-[0.98] text-white transition-all duration-200 shadow-md hover:shadow-lg rounded-xl disabled:opacity-80 disabled:cursor-not-allowed"
         >
           {loading ? (
             <>
@@ -94,7 +94,7 @@ function LoginForm() {
 
       {/* Redirecting hint — only visible while loading */}
       {loading && (
-        <p className="text-[11px] text-center text-blue-500 animate-pulse">
+        <p className="text-[11px] text-center text-green-500 animate-pulse">
           Opening Google sign-in, please wait…
         </p>
       )}
@@ -106,9 +106,9 @@ function LoginForm() {
           style={{ animationDelay: '500ms' }}
         >
           By signing in you agree to our{' '}
-          <span className="underline cursor-pointer hover:text-blue-600 transition-colors">Terms of Service</span>
+          <span className="underline cursor-pointer hover:text-green-600 transition-colors">Terms of Service</span>
           {' '}and{' '}
-          <span className="underline cursor-pointer hover:text-blue-600 transition-colors">Privacy Policy</span>
+          <span className="underline cursor-pointer hover:text-green-600 transition-colors">Privacy Policy</span>
         </p>
       )}
     </div>
@@ -123,14 +123,14 @@ export default function LoginPage() {
       {/* ════════════════════════════════════════════
           LEFT — Brand panel
       ════════════════════════════════════════════ */}
-      <div className="animate-slide-left hidden lg:flex lg:w-[52%] relative flex-col bg-gradient-to-br from-blue-500 via-blue-600 to-blue-800 text-white overflow-hidden">
+      <div className="animate-slide-left hidden lg:flex lg:w-[52%] relative flex-col bg-gradient-to-br from-green-500 via-green-600 to-green-800 text-white overflow-hidden">
 
         {/* Dot-grid texture overlay */}
         <div className="dots-pattern absolute inset-0 pointer-events-none" />
 
         {/* Drifting blur orbs */}
-        <div className="animate-orb-drift   absolute -top-32 -right-24  w-96 h-96 rounded-full bg-blue-400/25 blur-3xl pointer-events-none" />
-        <div className="animate-orb-drift-2 absolute -bottom-24 -left-20 w-80 h-80 rounded-full bg-blue-900/35 blur-3xl pointer-events-none" />
+        <div className="animate-orb-drift   absolute -top-32 -right-24  w-96 h-96 rounded-full bg-green-400/25 blur-3xl pointer-events-none" />
+        <div className="animate-orb-drift-2 absolute -bottom-24 -left-20 w-80 h-80 rounded-full bg-green-900/35 blur-3xl pointer-events-none" />
         <div className="animate-orb-drift   absolute top-1/2  right-8   w-48 h-48 rounded-full bg-white/10  blur-2xl pointer-events-none" style={{ animationDelay: '4s' }} />
 
         {/* ── Logo (top-left) ── */}
@@ -172,7 +172,7 @@ export default function LoginPage() {
 
           {/* Tagline */}
           <p
-            className="animate-fade-up text-blue-100/90 text-sm leading-relaxed max-w-xs"
+            className="animate-fade-up text-green-100/90 text-sm leading-relaxed max-w-xs"
             style={{ animationDelay: '390ms' }}
           >
             Manage medicines, billing, and stock — all in one place, even without internet.
@@ -186,7 +186,7 @@ export default function LoginPage() {
                 className="animate-badge-pop flex items-center gap-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/15 rounded-xl px-4 py-3 text-sm font-medium transition-colors duration-200 cursor-default"
                 style={{ animationDelay: `${460 + i * 80}ms` }}
               >
-                <Icon className="w-4 h-4 text-blue-200 shrink-0" />
+                <Icon className="w-4 h-4 text-green-200 shrink-0" />
                 {label}
               </div>
             ))}
@@ -195,7 +195,7 @@ export default function LoginPage() {
 
         {/* Copyright */}
         <p
-          className="animate-fade-up relative z-10 text-center text-[11px] text-blue-200/70 px-10 pb-8"
+          className="animate-fade-up relative z-10 text-center text-[11px] text-green-200/70 px-10 pb-8"
           style={{ animationDelay: '750ms' }}
         >
           © 2026 Pharmacy POS. All rights reserved.
@@ -208,7 +208,7 @@ export default function LoginPage() {
       <div className="animate-slide-right flex-1 flex flex-col items-center justify-center bg-white px-8 py-12 relative">
 
         {/* Subtle background tint */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 via-white to-white pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-br from-green-50/40 via-white to-white pointer-events-none" />
 
         <div className="relative z-10 w-full max-w-sm">
 
@@ -217,7 +217,7 @@ export default function LoginPage() {
             className="animate-fade-up lg:hidden flex items-center gap-2 mb-10"
             style={{ animationDelay: '100ms' }}
           >
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-md">
+            <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center shadow-md">
               <Pill className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-gray-800">Pharmacy POS</span>

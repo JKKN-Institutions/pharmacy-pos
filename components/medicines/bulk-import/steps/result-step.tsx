@@ -33,7 +33,7 @@ export function ResultStep({ result, onClose }: ResultStepProps) {
           <p className="text-sm text-muted-foreground">Medicines Added</p>
         </div>
         <div className="rounded-xl border p-5 text-center space-y-1">
-          <p className="text-4xl font-bold text-blue-600">
+          <p className="text-4xl font-bold text-green-600">
             {result.overwritten.toLocaleString()}
           </p>
           <p className="text-sm text-muted-foreground">Medicines Updated</p>

@@ -159,9 +159,9 @@ export function ImportPreviewStep({
                 </span>
               </div>
               {Object.values(conflictResolutions).filter((r) => r.action === 'overwrite').length > 0 && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
-                  <GitMerge className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm text-blue-700 dark:text-blue-400">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800">
+                  <GitMerge className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-700 dark:text-green-400">
                     {Object.values(conflictResolutions).filter((r) => r.action === 'overwrite').length} to overwrite
                   </span>
                 </div>

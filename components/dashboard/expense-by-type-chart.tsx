@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { formatINR } from '@/lib/utils/currency'
 
 const COLORS = [
-  'hsl(221 83% 53%)',
+  'hsl(142 71% 45%)',
   'hsl(142 71% 45%)',
   'hsl(38 92% 50%)',
   'hsl(262 83% 58%)',

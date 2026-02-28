@@ -11,7 +11,7 @@ import type { Expense } from '@/lib/types/database'
 
 const methodColors: Record<string, string> = {
   cash: 'bg-green-100 text-green-700',
-  upi: 'bg-blue-100 text-blue-700',
+  upi: 'bg-green-100 text-green-700',
   card: 'bg-purple-100 text-purple-700',
   credit: 'bg-amber-100 text-amber-700',
 }

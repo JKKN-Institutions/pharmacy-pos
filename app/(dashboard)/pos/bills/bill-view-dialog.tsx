@@ -26,14 +26,14 @@ type BillItem = {
 }
 
 const statusStyles: Record<string, string> = {
-  saved:      'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  saved:      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   synced:     'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   sync_error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
 const methodStyles: Record<string, string> = {
   cash:   'bg-green-50 text-green-700 dark:bg-green-900/20',
-  upi:    'bg-blue-50 text-blue-700 dark:bg-blue-900/20',
+  upi:    'bg-green-50 text-green-700 dark:bg-green-900/20',
   card:   'bg-purple-50 text-purple-700 dark:bg-purple-900/20',
   credit: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20',
 }

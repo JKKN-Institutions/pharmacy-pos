@@ -477,6 +477,7 @@ export function MedicinesDataTable({
 
       {/* ── Table ────────────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-border shadow-sm overflow-hidden bg-card">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
@@ -546,6 +547,7 @@ export function MedicinesDataTable({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       {/* ── Pagination footer ─────────────────────────────────────────────── */}

@@ -104,14 +104,17 @@ export interface PurchaseItem {
   id: string
   purchase_id: string
   medicine_id: string
-  medicine_name: string
-  batch_number: string
+  batch_no: string           // actual DB column (was incorrectly batch_number)
   expiry_date: string
-  quantity: number
-  cost_price: number
-  selling_price: number
-  mrp: number
-  total: number
+  packing_qty: number
+  quantity: number           // packs ordered
+  total_qty: number          // packing_qty × quantity
+  purchase_price: number     // actual DB column (was incorrectly cost_price)
+  sale_price: number         // actual DB column (was incorrectly selling_price)
+  discount_type: 'percent' | 'flat'
+  discount_value: number
+  tax: number
+  price: number              // final line total after discount + tax
 }
 
 // ─── POS Bills ────────────────────────────────────────────────────────────────

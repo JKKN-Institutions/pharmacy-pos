@@ -12,14 +12,21 @@ Implementation plan: `docs/plans/2026-02-23-pharmacy-pos-implementation-plan.md`
 ## Commands
 
 ```bash
-npm run dev       # Start dev server (Next.js 16 with Turbopack)
-npm run build     # Production build
-npm run lint      # ESLint
+bun run dev       # Start dev server (Next.js 16 with Turbopack)
+bun run build     # Production build
+bun run lint      # ESLint
 ```
 
 Add shadcn/ui components:
 ```bash
-npx shadcn@latest add <component>   # e.g., npx shadcn@latest add table
+bunx shadcn@latest add <component>   # e.g., bunx shadcn@latest add table
+```
+
+Install packages:
+```bash
+bun add <package>          # add a dependency
+bun add -d <package>       # add a dev dependency
+bun install                # install all dependencies from bun.lock
 ```
 
 Apply Supabase migrations:

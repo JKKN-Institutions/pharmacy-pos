@@ -19,8 +19,30 @@ export const medicineSchema = z.object({
 
 /** Fixed unit values accepted by the bulk import wizard. */
 export const VALID_UNITS = [
-  'Tablet', 'Capsule', 'Syrup', 'Injection', 'Ointment',
-  'Drops', 'Cream', 'Powder', 'Sachet', 'Gel', 'Solution', 'Suspension',
+  // Oral solid
+  'Tablet', 'Capsule', 'Lozenge', 'Sachet', 'Powder', 'Granules',
+  // Oral liquid
+  'Syrup', 'Suspension', 'Solution', 'Liquid', 'Drops',
+  // Topical / Dermal
+  'Cream', 'Ointment', 'Gel', 'Lotion', 'Paste', 'Foam', 'Spray', 'Patch', 'Roll',
+  // Parenteral
+  'Injection', 'Vial', 'Ampoule',
+  // Inhalation
+  'Inhaler', 'Nebulizer',
+  // Rectal / Vaginal
+  'Suppository', 'Enema',
+  // Wound care / Surgical
+  'Bandage', 'Gauze', 'Cotton', 'Tape', 'Dressing', 'Syringe', 'Needle', 'Suture',
+  // Orthopedic / Support
+  'Belt', 'Brace', 'Splint',
+  // Diagnostic / Devices
+  'Strip', 'Kit', 'Device', 'Glucometer', 'Thermometer', 'Lancet',
+  // Personal care / Para-pharmacy
+  'Soap', 'Shampoo', 'Bar', 'Diaper', 'Wipes', 'Pad', 'Mask',
+  // Drug delivery devices
+  'Pen', 'Cartridge',
+  // Containers (when used as unit)
+  'Bottle', 'Tube', 'Jar',
 ] as const
 export type ValidUnit = typeof VALID_UNITS[number]
 

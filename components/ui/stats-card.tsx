@@ -50,10 +50,10 @@ export function StatsCard({
           </div>
           {Icon && (
             <div className={cn(
-              'flex h-8 w-8 sm:h-11 sm:w-11 items-center justify-center rounded-lg shrink-0',
+              'flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg shrink-0',
               iconClassName ?? 'bg-primary/10'
             )}>
-              <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-current" />
             </div>
           )}
         </div>

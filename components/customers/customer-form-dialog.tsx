@@ -66,8 +66,8 @@ function CustomerForm({
     resolver: zodResolver(schema) as any, defaultValues })
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-        <div className="grid grid-cols-2 gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 max-h-[75vh] sm:max-h-[80vh] overflow-y-auto pr-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <FormField control={form.control} name="first_name" render={({ field }) => (
             <FormItem>
               <FormLabel>First Name *</FormLabel>
@@ -143,7 +143,7 @@ function CustomerForm({
             </FormItem>
           )} />
           <FormField control={form.control} name="address_line1" render={({ field }) => (
-            <FormItem className="col-span-2">
+            <FormItem className="sm:col-span-2">
               <FormLabel>Address Line 1</FormLabel>
               <FormControl><Input placeholder="Street / Door No." {...field} /></FormControl>
               <FormMessage />
@@ -164,7 +164,7 @@ function CustomerForm({
             </FormItem>
           )} />
         </div>
-        <div className="flex gap-2 pt-2">
+        <div className="flex flex-col sm:flex-row gap-2 pt-2">
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>Cancel</Button>
           <Button type="submit" className="flex-1" disabled={loading}>{loading ? 'Saving...' : 'Save'}</Button>
         </div>

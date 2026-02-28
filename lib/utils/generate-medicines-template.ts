@@ -2,7 +2,7 @@
 // Uses exceljs (MIT) for data-validation support that SheetJS CE lacks.
 import { VALID_UNITS, VALID_GST_SLABS } from '@/lib/validators/medicine-schema'
 
-export async function generateMedicinesTemplate(): Promise<void> {
+export async function generateMedicinesTemplate(categories: string[] = []): Promise<void> {
   // Dynamic import keeps exceljs out of the main JS bundle.
   // It only loads when the user actually clicks "Download Template".
   const ExcelJS = await import('exceljs')
@@ -66,6 +66,19 @@ export async function generateMedicinesTemplate(): Promise<void> {
     error: 'Status must be Normal or Inactive',
   })
 
+  // Category — column E (index 5, 1-based) — only add dropdown when DB names are available
+  if (categories.length > 0) {
+    const catFormula = `"${categories.join(',')}"`
+    wsAny.dataValidations.add('E2:E10000', {
+      type: 'list',
+      allowBlank: true,
+      formulae: [catFormula],
+      showInputMessage: true,
+      promptTitle: 'Category',
+      prompt: `Pick a category or type a new one: ${categories.join(', ')}`,
+    })
+  }
+
   // Tax% — column J (index 10, 1-based)
   wsAny.dataValidations.add('J2:J10000', {
     type: 'list',
@@ -92,7 +105,7 @@ export async function generateMedicinesTemplate(): Promise<void> {
     ['Company',      '(any text)',                        'Optional'],
     ['Unit',         VALID_UNITS.join(', '),              'Must match exactly (case-sensitive)'],
     ['Unit/Packing', '(any text)',                        'e.g. Strip of 10, Bottle 100ml'],
-    ['Category',     '(any text)',                        'Created automatically if not found'],
+    ['Category',     categories.length > 0 ? categories.join(', ') : '(any text)', categories.length > 0 ? 'Pick from dropdown — new names are auto-created' : 'Created automatically if not found'],
     ['Storebox',     '(any text)',                        'e.g. Rack A-1, Shelf B'],
     ['Reorderlevel', '(number)',                          'Defaults to 20 if blank'],
     ['Status',       'Normal, Inactive',                  'Normal = active medicine'],

@@ -1,5 +1,3 @@
-import { formatINR } from '@/lib/utils/currency'
-
 interface BillTotalsProps {
   totals: {
     subtotal: number
@@ -11,32 +9,46 @@ interface BillTotalsProps {
 
 export function BillTotals({ totals }: BillTotalsProps) {
   return (
-    <div className="border-t bg-muted/30 px-5 py-4">
+    <div className="border-t px-5 py-4 bg-muted/20">
       <div className="flex justify-end">
-        <div className="w-56 space-y-1.5 text-sm">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Subtotal</span>
-            <span className="tabular-nums">{formatINR(totals.subtotal)}</span>
-          </div>
-
-          {totals.discount_total > 0 && (
-            <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
-              <span>Discount</span>
-              <span className="tabular-nums">− {formatINR(totals.discount_total)}</span>
-            </div>
-          )}
-
-          {totals.tax_total > 0 && (
-            <div className="flex justify-between text-muted-foreground">
-              <span>Tax</span>
-              <span className="tabular-nums">+ {formatINR(totals.tax_total)}</span>
-            </div>
-          )}
-
-          <div className="flex justify-between font-bold text-base border-t pt-2 mt-2">
-            <span>Total</span>
-            <span className="tabular-nums text-primary">{formatINR(totals.total)}</span>
-          </div>
+        {/* Plain decimal numbers matching reference — no ₹ symbol */}
+        <div className="w-72 rounded-lg border overflow-hidden text-sm border-collapse">
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr className="border-b border-border">
+                <td className="py-2.5 px-4 text-muted-foreground font-medium border-r border-border">
+                  Sub Total
+                </td>
+                <td className="py-2.5 px-4 text-right tabular-nums">
+                  {totals.subtotal.toFixed(2)}
+                </td>
+              </tr>
+              <tr className="border-b border-border">
+                <td className="py-2.5 px-4 text-muted-foreground font-medium border-r border-border">
+                  Discount
+                </td>
+                <td className="py-2.5 px-4 text-right tabular-nums">
+                  {totals.discount_total.toFixed(2)}
+                </td>
+              </tr>
+              <tr className="border-b border-border">
+                <td className="py-2.5 px-4 text-muted-foreground font-medium border-r border-border">
+                  Tax
+                </td>
+                <td className="py-2.5 px-4 text-right tabular-nums">
+                  {totals.tax_total.toFixed(2)}
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2.5 px-4 font-bold text-base border-r border-border">
+                  Amount
+                </td>
+                <td className="py-2.5 px-4 text-right tabular-nums font-bold text-base">
+                  {totals.total.toFixed(2)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

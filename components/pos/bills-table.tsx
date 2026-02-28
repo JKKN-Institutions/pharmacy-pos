@@ -8,13 +8,13 @@ import {
   getSortedRowModel,
   useReactTable,
   type SortingState,
+  type PaginationState,
 } from '@tanstack/react-table'
 import { format } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
 import * as XLSX from 'xlsx'
 import { toast } from 'sonner'
 import {
-  Search,
   FileSpreadsheet,
   FileText,
   Copy,
@@ -58,7 +58,7 @@ import { formatINR } from '@/lib/utils/currency'
 import type { PosBill } from '@/lib/types/database'
 import { billColumns } from '@/app/(dashboard)/pos/bills/columns'
 
-// ─── Export helper ────────────────────────────────────────────────────────────
+// ─── Export helpers ───────────────────────────────────────────────────────────
 
 function billsToExportRows(bills: PosBill[]) {
   return bills.map((b) => ({
@@ -83,8 +83,8 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [dateRange, setDateRange]         = useState<DateRange | undefined>(undefined)
   const [sorting, setSorting]             = useState<SortingState>([])
+  const [pagination, setPagination]       = useState<PaginationState>({ pageIndex: 0, pageSize: 10 })
 
-  // ─── Active filter state ──────────────────────────────────────────────────
   const hasFilters =
     !!search ||
     statusFilter !== 'all' ||
@@ -93,9 +93,9 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
 
   const dateLabel = useMemo(() => {
     if (!dateRange?.from) return null
-    const f = format(dateRange.from, 'dd MMM yyyy')
-    const t = dateRange.to ? format(dateRange.to, 'dd MMM yyyy') : null
-    return t && t !== f ? `${f} – ${t}` : f
+    const f = format(dateRange.from, 'dd/MM/yyyy')
+    const t = dateRange.to ? format(dateRange.to, 'dd/MM/yyyy') : null
+    return t && t !== f ? `${f} => ${t}` : f
   }, [dateRange])
 
   // ─── Client-side filtering ────────────────────────────────────────────────
@@ -110,12 +110,8 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           (b.customer_phone ?? '').includes(q)
       )
     }
-    if (statusFilter !== 'all') {
-      data = data.filter((b) => b.status === statusFilter)
-    }
-    if (paymentFilter !== 'all') {
-      data = data.filter((b) => b.payment_method === paymentFilter)
-    }
+    if (statusFilter !== 'all')  data = data.filter((b) => b.status === statusFilter)
+    if (paymentFilter !== 'all') data = data.filter((b) => b.payment_method === paymentFilter)
     if (dateRange?.from) {
       const fromStr = format(dateRange.from, 'yyyy-MM-dd')
       data = data.filter((b) => (b.bill_date ?? '') >= fromStr)
@@ -142,15 +138,13 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    initialState: { pagination: { pageSize: 15 } },
-    state: { sorting },
+    onPaginationChange: setPagination,
+    state: { sorting, pagination },
   })
 
-  const totalRows     = filtered.length
-  const pageIndex     = table.getState().pagination.pageIndex
-  const pageSize      = table.getState().pagination.pageSize
-  const fromRow       = totalRows === 0 ? 0 : pageIndex * pageSize + 1
-  const toRow         = Math.min((pageIndex + 1) * pageSize, totalRows)
+  const totalRows = filtered.length
+  const fromRow   = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const toRow     = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
 
   // ─── Excel export ─────────────────────────────────────────────────────────
   const exportToExcel = useCallback(() => {
@@ -166,7 +160,6 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     toast.success(`${rows.length} bills exported to Excel`)
   }, [filtered])
 
-  // ─── CSV export ───────────────────────────────────────────────────────────
   const exportToCSV = useCallback(() => {
     const rows = billsToExportRows(filtered)
     if (!rows.length) { toast.error('No data to export'); return }
@@ -190,7 +183,6 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     toast.success(`${rows.length} bills exported to CSV`)
   }, [filtered])
 
-  // ─── Copy to clipboard ────────────────────────────────────────────────────
   const copyToClipboard = useCallback(async () => {
     const rows = billsToExportRows(filtered)
     if (!rows.length) { toast.error('No data to copy'); return }
@@ -205,23 +197,18 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     toast.success(`${rows.length} rows copied to clipboard`)
   }, [filtered])
 
-  // ─── Print (table-only in new window) ────────────────────────────────────
   const printTable = useCallback(() => {
     if (!filtered.length) { toast.error('No data to print'); return }
-
     const grandTotal = formatINR(filtered.reduce((s, b) => s + (b.total ?? 0), 0))
     const rows = filtered.map((b, i) => `
       <tr style="background:${i % 2 === 1 ? '#fafafa' : '#fff'}">
         <td class="mono">${b.bill_no}</td>
-        <td>${b.bill_date ? format(new Date(b.bill_date), 'dd MMM yyyy') : '—'}</td>
+        <td>${b.bill_date ? format(new Date(b.bill_date), 'dd/MM/yyyy') : '—'}</td>
         <td>${b.customer_name ?? 'Walk-in'}</td>
-        <td class="muted">${b.customer_phone ?? '—'}</td>
-        <td class="cap">${b.payment_method}</td>
         <td class="right">${formatINR(b.subtotal)}</td>
-        <td class="right red">${b.discount_total > 0 ? '-' + formatINR(b.discount_total) : '—'}</td>
         <td class="right muted">${b.tax_total > 0 ? formatINR(b.tax_total) : '—'}</td>
+        <td class="right red">${b.discount_total > 0 ? formatINR(b.discount_total) : '—'}</td>
         <td class="right bold">${formatINR(b.total)}</td>
-        <td class="cap">${b.status}</td>
       </tr>`).join('')
 
     const html = `<!DOCTYPE html>
@@ -236,63 +223,91 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
   td{padding:8px 12px;border-bottom:1px solid #f3f4f6}
   tfoot td{background:#f9fafb!important;border-top:2px solid #e5e7eb;font-weight:700}
   .mono{font-family:'Courier New',monospace;font-weight:600} .right{text-align:right}
-  .bold{font-weight:700} .cap{text-transform:capitalize} .red{color:#ef4444} .muted{color:#6b7280}
+  .bold{font-weight:700} .red{color:#ef4444} .muted{color:#6b7280}
   @media print{body{padding:0}}
 </style></head>
 <body>
   <div class="hdr">
-    <h2>POS Billing History</h2>
-    <p>Printed on ${format(new Date(), 'dd MMM yyyy, hh:mm a')} &middot; ${filtered.length} record${filtered.length !== 1 ? 's' : ''}${dateLabel ? ' &middot; ' + dateLabel : ''}</p>
+    <h2>POS/Bill History</h2>
+    <p>Printed on ${format(new Date(), 'dd/MM/yyyy, hh:mm a')} &middot; ${filtered.length} record${filtered.length !== 1 ? 's' : ''}${dateLabel ? ' &middot; ' + dateLabel : ''}</p>
   </div>
   <table>
     <thead><tr>
-      <th>Bill No</th><th>Date</th><th>Customer</th><th>Phone</th>
-      <th>Payment</th><th class="right">Subtotal</th><th class="right">Discount</th>
-      <th class="right">Tax</th><th class="right">Total</th><th>Status</th>
+      <th>#</th><th>Date</th><th>Name</th>
+      <th class="right">Subtotal</th><th class="right">Tax</th>
+      <th class="right">Discount</th><th class="right">Amount</th>
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="8">Grand Total (${filtered.length} bills)</td>
-      <td class="right">${grandTotal}</td><td></td>
+      <td colspan="6">Grand Total (${filtered.length} bills)</td>
+      <td class="right">${grandTotal}</td>
     </tr></tfoot>
   </table>
   <script>window.onload=function(){setTimeout(function(){window.print();window.close()},250)}</script>
 </body></html>`
 
-    const win = window.open('', '_blank', 'width=1100,height=800')
+    const win = window.open('', '_blank', 'width=1000,height=700')
     if (win) { win.document.write(html); win.document.close() }
     else toast.error('Pop-up blocked — please allow pop-ups to print.')
   }, [filtered, dateLabel])
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
 
-      {/* ── Filter + Export toolbar ──────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
+      {/* ── Primary toolbar: Show N entries (left) + Search (right) ─────────── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
 
-        {/* Search */}
-        <div className="relative w-full sm:w-60">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            placeholder="Search bill no / customer..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9 w-full"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+        {/* Show N entries */}
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Show</span>
+          <Select
+            value={String(pagination.pageSize)}
+            onValueChange={(v) => setPagination({ pageIndex: 0, pageSize: Number(v) })}
+          >
+            <SelectTrigger className="h-8 w-[68px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 15, 25, 50].map((n) => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground">entries</span>
         </div>
 
-        {/* Status — shadcn Select */}
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="h-9 w-full sm:w-36">
+        {/* Search */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Search:</span>
+          <div className="relative">
+            <Input
+              placeholder="Bill no / customer..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setPagination((p) => ({ ...p, pageIndex: 0 }))
+              }}
+              className="h-8 w-52 pr-7"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Secondary toolbar: Filters + Date + Export ──────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 pb-1">
+
+        {/* Status */}
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
+          <SelectTrigger className="h-8 w-[130px] text-xs">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -304,9 +319,9 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           </SelectContent>
         </Select>
 
-        {/* Payment — shadcn Select */}
-        <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-          <SelectTrigger className="h-9 w-full sm:w-36">
+        {/* Payment */}
+        <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
+          <SelectTrigger className="h-8 w-[130px] text-xs">
             <SelectValue placeholder="Payment" />
           </SelectTrigger>
           <SelectContent>
@@ -318,23 +333,23 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           </SelectContent>
         </Select>
 
-        {/* Date range — shadcn Popover + Calendar */}
+        {/* Date range */}
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               className={cn(
-                'h-9 w-full sm:w-60 justify-start gap-2 font-normal',
+                'h-8 px-3 gap-1.5 text-xs font-normal',
                 !dateRange?.from && 'text-muted-foreground'
               )}
             >
-              <CalendarIcon className="h-4 w-4 shrink-0" />
-              <span className="truncate text-sm">
-                {dateLabel ?? 'Pick date range'}
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate max-w-[140px]">
+                {dateLabel ?? 'Date range'}
               </span>
               {dateRange?.from && (
                 <X
-                  className="ml-auto h-3.5 w-3.5 shrink-0 opacity-60 hover:opacity-100"
+                  className="ml-1 h-3 w-3 opacity-60 hover:opacity-100 shrink-0"
                   onClick={(e) => { e.stopPropagation(); setDateRange(undefined) }}
                 />
               )}
@@ -352,45 +367,45 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           </PopoverContent>
         </Popover>
 
-        {/* Clear all filters */}
+        {/* Reset */}
         {hasFilters && (
           <Button
             variant="ghost"
             size="sm"
             onClick={clearAll}
-            className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+            className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
           >
-            <X className="h-3.5 w-3.5" />
+            <X className="h-3 w-3" />
             Reset
           </Button>
         )}
 
-        {/* Export — shadcn DropdownMenu */}
+        {/* Export */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 gap-2 ml-auto">
-              <Download className="h-4 w-4" />
+            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs ml-auto">
+              <Download className="h-3.5 w-3.5" />
               Export
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem onClick={copyToClipboard} className="gap-2.5 cursor-pointer">
-              <Copy className="h-4 w-4 text-muted-foreground" />
+            <DropdownMenuItem onClick={copyToClipboard} className="gap-2.5 cursor-pointer text-sm">
+              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
               Copy to clipboard
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={exportToCSV} className="gap-2.5 cursor-pointer">
-              <FileText className="h-4 w-4 text-muted-foreground" />
+            <DropdownMenuItem onClick={exportToCSV} className="gap-2.5 cursor-pointer text-sm">
+              <FileText className="h-3.5 w-3.5 text-muted-foreground" />
               Export as CSV
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={exportToExcel} className="gap-2.5 cursor-pointer">
-              <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <DropdownMenuItem onClick={exportToExcel} className="gap-2.5 cursor-pointer text-sm">
+              <FileSpreadsheet className="h-3.5 w-3.5 text-green-600" />
               Export as Excel
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={printTable} className="gap-2.5 cursor-pointer">
-              <Printer className="h-4 w-4 text-muted-foreground" />
+            <DropdownMenuItem onClick={printTable} className="gap-2.5 cursor-pointer text-sm">
+              <Printer className="h-3.5 w-3.5 text-muted-foreground" />
               Print
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -401,67 +416,67 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-border shadow-sm overflow-hidden bg-card">
         <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((hg) => (
-              <TableRow key={hg.id} className="bg-muted/60 hover:bg-muted/60 border-b-2 border-border">
-                {hg.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    className="font-semibold text-xs uppercase tracking-wider text-foreground/70 py-3 px-4 first:pl-6 last:pr-6"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row, idx) => (
-                <TableRow
-                  key={row.id}
-                  className={cn(
-                    'border-b border-border/50 transition-colors hover:bg-primary/5',
-                    idx % 2 === 1 ? 'bg-muted/20' : 'bg-card'
-                  )}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3 px-4 first:pl-6 last:pr-6">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
+          <Table>
+            <TableHeader>
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id} className="bg-muted/60 hover:bg-muted/60 border-b-2 border-border">
+                  {hg.headers.map((header) => (
+                    <TableHead
+                      key={header.id}
+                      className="py-3 px-4 first:pl-5 last:pr-5"
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(header.column.columnDef.header, header.getContext())}
+                    </TableHead>
                   ))}
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={billColumns.length} className="h-36 text-center">
-                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                    <InboxIcon className="h-8 w-8 opacity-30" />
-                    <span className="text-sm">No bills match the current filters</span>
-                    {hasFilters && (
-                      <button onClick={clearAll} className="text-xs text-primary hover:underline">
-                        Clear all filters
-                      </button>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {table.getRowModel().rows.length ? (
+                table.getRowModel().rows.map((row, idx) => (
+                  <TableRow
+                    key={row.id}
+                    className={cn(
+                      'border-b border-border/50 transition-colors hover:bg-primary/5',
+                      idx % 2 === 1 ? 'bg-muted/20' : 'bg-card'
                     )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-3 px-4 first:pl-5 last:pr-5">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={billColumns.length} className="h-36 text-center">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <InboxIcon className="h-8 w-8 opacity-30" />
+                      <span className="text-sm">No bills match the current filters</span>
+                      {hasFilters && (
+                        <button onClick={clearAll} className="text-xs text-primary hover:underline">
+                          Clear all filters
+                        </button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
 
       {/* ── Pagination ──────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
-        <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 text-sm text-muted-foreground">
+        <span>
           {totalRows === 0
-            ? 'No records'
-            : `Showing ${fromRow}–${toRow} of ${totalRows} record${totalRows !== 1 ? 's' : ''}`}
-        </p>
+            ? 'No records found'
+            : `Showing ${fromRow} to ${toRow} of ${totalRows} entries`}
+        </span>
         <div className="flex items-center gap-1">
           <Button
             variant="outline" size="sm"
@@ -471,8 +486,8 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm font-medium px-3 py-1 rounded-md bg-muted">
-            {pageIndex + 1} / {table.getPageCount() || 1}
+          <span className="text-sm font-medium px-3 py-1 rounded-md bg-muted text-foreground">
+            {pagination.pageIndex + 1} / {table.getPageCount() || 1}
           </span>
           <Button
             variant="outline" size="sm"

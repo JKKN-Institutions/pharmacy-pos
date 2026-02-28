@@ -30,12 +30,15 @@ export async function createPurchaseAction(data: {
   total: number
 }) {
   const supabase = await createClient()
-  const { data: branch } = await supabase.from('branches').select('id').limit(1).single()
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: userProfile } = await supabase
     .from('user_profiles')
-    .select('id')
-    .limit(1)
+    .select('id, branch_id')
+    .eq('auth_user_id', user?.id ?? '')
     .single()
+
+  const branchId  = userProfile?.branch_id ?? null
+  const createdBy = userProfile?.id ?? null
 
   // 1. Create purchase header
   const { data: purchase, error: purchaseError } = await supabase
@@ -49,8 +52,8 @@ export async function createPurchaseAction(data: {
       tax: data.tax,
       total: data.total,
       status: 'received',
-      branch_id: branch?.id ?? null,
-      created_by: userProfile?.id ?? null,
+      branch_id: branchId,
+      created_by: createdBy,
     })
     .select('id')
     .single()
@@ -96,7 +99,7 @@ export async function createPurchaseAction(data: {
       sold_qty: 0,
       available_qty: item.total_qty,
       status: 'active',
-      branch_id: branch?.id ?? null,
+      branch_id: branchId,
     }))
   )
   if (stockError) {
@@ -132,14 +135,14 @@ export async function bulkImportPurchasesAction(rows: BulkPurchaseRow[]): Promis
 
   const supabase = await createClient()
 
-  const { data: branch } = await supabase.from('branches').select('id').limit(1).single()
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: userProfile } = await supabase
     .from('user_profiles')
-    .select('id')
-    .limit(1)
+    .select('id, branch_id')
+    .eq('auth_user_id', user?.id ?? '')
     .single()
 
-  const branchId = branch?.id ?? null
+  const branchId  = userProfile?.branch_id ?? null
   const createdBy = userProfile?.id ?? null
 
   // Load all existing suppliers once (avoid N+1 queries)

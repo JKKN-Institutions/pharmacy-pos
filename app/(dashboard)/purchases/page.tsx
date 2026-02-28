@@ -25,6 +25,12 @@ export default async function PurchasesPage({
 
   const { data: purchases, count } = await query
 
+  // Flatten supplier name for client-side search
+  const data = (purchases ?? []).map((p: any) => ({
+    ...p,
+    supplier_name: p.suppliers?.name ?? '',
+  }))
+
   return (
     <div className="space-y-6">
       <PageHeader title="Purchase" description={`${count ?? 0} purchases recorded`}>
@@ -37,9 +43,9 @@ export default async function PurchasesPage({
       </PageHeader>
       <DataTable
         columns={purchaseColumns}
-        data={purchases ?? []}
-        searchKey="invoice_no"
-        searchPlaceholder="Search by invoice no..."
+        data={data}
+        searchKey="supplier_name"
+        searchPlaceholder="Search supplier..."
       />
     </div>
   )

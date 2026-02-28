@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react'
 import { syncMedicines, flushOfflineBills } from '@/lib/offline/sync'
 import { db } from '@/lib/offline/db'
-import { MedicineSearch } from './medicine-search'
 import { BillLineItems } from './bill-line-items'
 import { BillTotals } from './bill-totals'
 import { CustomerInfo } from './customer-info'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, Save } from 'lucide-react'
 import { calculateLineItem, calculateBillTotals } from '@/lib/utils/billing'
 import type { DiscountType } from '@/lib/types/database'
 
@@ -38,25 +37,24 @@ interface PosFormProps {
 }
 
 export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
-  const [isOnline, setIsOnline] = useState(true)
-  const [isSyncing, setIsSyncing] = useState(false)
-  const [items, setItems] = useState<BillItem[]>([])
+  const [isOnline, setIsOnline]         = useState(true)
+  const [isSyncing, setIsSyncing]       = useState(false)
+  const [items, setItems]               = useState<BillItem[]>([])
   const [customerName, setCustomerName] = useState('')
+  const [customerEmail, setCustomerEmail] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
-  const [doctor, setDoctor] = useState('')
+  const [doctor, setDoctor]             = useState('')
+  const [billDate, setBillDate]         = useState(() => new Date().toISOString().split('T')[0])
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'credit'>('cash')
-  const [note, setNote] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [note, setNote]                 = useState('')
+  const [saving, setSaving]             = useState(false)
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
     setIsSyncing(true)
     syncMedicines().finally(() => setIsSyncing(false))
 
-    const handleOnline = () => {
-      setIsOnline(true)
-      flushOfflineBills()
-    }
+    const handleOnline  = () => { setIsOnline(true); flushOfflineBills() }
     const handleOffline = () => setIsOnline(false)
     window.addEventListener('online', handleOnline)
     window.addEventListener('offline', handleOffline)
@@ -66,7 +64,7 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
     }
   }, [])
 
-  const lineItemTotals = items.map(item =>
+  const lineItemTotals = items.map((item) =>
     calculateLineItem({
       qty: item.qty,
       unit_price: item.sale_price,
@@ -78,10 +76,10 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
   const totals = calculateBillTotals(lineItemTotals)
 
   function addItem(item: BillItem) {
-    setItems(prev => {
-      const existing = prev.find(i => i.stock_batch_id === item.stock_batch_id)
+    setItems((prev) => {
+      const existing = prev.find((i) => i.stock_batch_id === item.stock_batch_id)
       if (existing) {
-        return prev.map(i =>
+        return prev.map((i) =>
           i.stock_batch_id === item.stock_batch_id
             ? { ...i, qty: Math.min(i.qty + 1, i.available_qty) }
             : i
@@ -92,29 +90,33 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
   }
 
   function updateItem(id: string, updates: Partial<BillItem>) {
-    setItems(prev => prev.map(i => {
-      if (i.id !== id) return i
-      const updated = { ...i, ...updates }
-      const line = calculateLineItem({
-        qty: updated.qty,
-        unit_price: updated.sale_price,
-        discount_type: updated.discount_type,
-        discount_value: updated.discount_value,
-        tax: updated.tax,
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id !== id) return i
+        const updated = { ...i, ...updates }
+        const line = calculateLineItem({
+          qty: updated.qty,
+          unit_price: updated.sale_price,
+          discount_type: updated.discount_type,
+          discount_value: updated.discount_value,
+          tax: updated.tax,
+        })
+        return { ...updated, price: line.price }
       })
-      return { ...updated, price: line.price }
-    }))
+    )
   }
 
   function removeItem(id: string) {
-    setItems(prev => prev.filter(i => i.id !== id))
+    setItems((prev) => prev.filter((i) => i.id !== id))
   }
 
   function clearBill() {
     setItems([])
     setCustomerName('')
+    setCustomerEmail('')
     setCustomerPhone('')
     setDoctor('')
+    setBillDate(new Date().toISOString().split('T')[0])
     setNote('')
     setPaymentMethod('cash')
   }
@@ -127,20 +129,20 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
 
     setSaving(true)
     const billData = {
-      customer_name: customerName || null,
-      customer_email: null,
+      customer_name:  customerName  || null,
+      customer_email: customerEmail || null,
       customer_phone: customerPhone || null,
-      doctor: doctor || null,
+      doctor:         doctor        || null,
       payment_method: paymentMethod,
       items: items.map(({ id, available_qty, ...rest }) => rest),
-      subtotal: totals.subtotal,
+      subtotal:       totals.subtotal,
       discount_total: totals.discount_total,
-      tax_total: totals.tax_total,
-      total: totals.total,
-      paid: totals.total,
-      due: 0,
-      note: note || null,
-      bill_date: new Date().toISOString().split('T')[0],
+      tax_total:      totals.tax_total,
+      total:          totals.total,
+      paid:           totals.total,
+      due:            0,
+      note:           note || null,
+      bill_date:      billDate,
     }
 
     if (isOnline) {
@@ -183,7 +185,7 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
   return (
     <div className="space-y-4">
 
-      {/* Status bar */}
+      {/* ── Status + Sync bar ──────────────────────────────── */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2">
           {isOnline ? (
@@ -213,30 +215,36 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
         </Button>
       </div>
 
-      {/* Medicine Search */}
-      <MedicineSearch onAddItem={addItem} isSyncing={isSyncing} />
-
-      {/* Bill Items Table */}
-      <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-        <BillLineItems items={items} onUpdate={updateItem} onRemove={removeItem} />
+      {/* ── Bill items + Totals (bordered card) ───────────── */}
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <BillLineItems
+          items={items}
+          onUpdate={updateItem}
+          onRemove={removeItem}
+          onAdd={addItem}
+          isSyncing={isSyncing}
+        />
         <BillTotals totals={totals} />
       </div>
 
-      {/* Customer Info */}
+      {/* ── Customer / payment info ────────────────────────── */}
       <CustomerInfo
-        name={customerName} onNameChange={setCustomerName}
-        phone={customerPhone} onPhoneChange={setCustomerPhone}
-        doctor={doctor} onDoctorChange={setDoctor}
+        name={customerName}           onNameChange={setCustomerName}
+        email={customerEmail}         onEmailChange={setCustomerEmail}
+        phone={customerPhone}         onPhoneChange={setCustomerPhone}
+        doctor={doctor}               onDoctorChange={setDoctor}
+        billDate={billDate}           onBillDateChange={setBillDate}
         paymentMethod={paymentMethod} onPaymentMethodChange={setPaymentMethod}
-        note={note} onNoteChange={setNote}
+        note={note}                   onNoteChange={setNote}
       />
 
-      {/* Actions */}
-      <div className="flex gap-3 justify-end pt-1">
+      {/* ── Save / Cancel actions (centered Save like template) */}
+      <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 pt-2">
         <Button
           variant="outline"
           onClick={() => { clearBill(); onCancel?.() }}
           disabled={saving}
+          className="w-full sm:w-auto"
         >
           Cancel
         </Button>
@@ -244,11 +252,13 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
           onClick={handleSave}
           disabled={saving || items.length === 0}
           size="lg"
-          className="px-10 gap-2"
+          className="w-full sm:w-40 gap-2"
         >
-          {saving ? 'Saving...' : `Save Bill · ₹${totals.total.toFixed(2)}`}
+          <Save className="w-4 h-4" />
+          {saving ? 'Saving...' : 'Save'}
         </Button>
       </div>
+
     </div>
   )
 }

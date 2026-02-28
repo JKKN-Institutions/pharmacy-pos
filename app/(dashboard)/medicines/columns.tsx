@@ -154,16 +154,22 @@ export const medicineColumns: ColumnDef<MedicineRow>[] = [
         <ArrowUpDown className="h-3.5 w-3.5" />
       </Button>
     ),
-    cell: ({ row }) => (
-      <div className="min-w-[180px]">
-        <p className="font-medium text-sm leading-snug">{row.getValue('name')}</p>
-        {row.original.generic_name && (
-          <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-            {row.original.generic_name}
+    cell: ({ row }) => {
+      const name = row.getValue('name') as string
+      const generic = row.original.generic_name
+      return (
+        <div className="w-[220px] min-w-[160px] max-w-[220px]">
+          <p className="font-medium text-sm leading-snug truncate" title={name}>
+            {name}
           </p>
-        )}
-      </div>
-    ),
+          {generic && (
+            <p className="text-xs text-muted-foreground mt-0.5 leading-snug truncate" title={generic}>
+              {generic}
+            </p>
+          )}
+        </div>
+      )
+    },
   },
   {
     accessorKey: 'company',

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Download, FileSpreadsheet } from 'lucide-react'
 import { VALID_UNITS, VALID_GST_SLABS } from '@/lib/validators/medicine-schema'
 import { generateMedicinesTemplate } from '@/lib/utils/generate-medicines-template'
+import { getMedicineCategoryNamesAction } from '@/app/(dashboard)/medicines/actions'
 import type { ParsedMedicineRow } from '@/lib/utils/parse-medicines-excel'
 import { parseMedicinesFile } from '@/lib/utils/parse-medicines-excel'
 import { toast } from 'sonner'
@@ -16,8 +17,21 @@ interface UploadStepProps {
 
 export function UploadStep({ onFileLoaded }: UploadStepProps) {
   const fileRef  = useRef<HTMLInputElement>(null)
-  const [dragOver, setDragOver] = useState(false)
-  const [parsing,  setParsing ] = useState(false)
+  const [dragOver,           setDragOver          ] = useState(false)
+  const [parsing,            setParsing           ] = useState(false)
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false)
+
+  async function handleDownloadTemplate() {
+    setDownloadingTemplate(true)
+    try {
+      const categories = await getMedicineCategoryNamesAction()
+      await generateMedicinesTemplate(categories)
+    } catch {
+      toast.error('Failed to generate template')
+    } finally {
+      setDownloadingTemplate(false)
+    }
+  }
 
   async function processFile(file: File) {
     setParsing(true)
@@ -118,9 +132,15 @@ export function UploadStep({ onFileLoaded }: UploadStepProps) {
       </div>
 
       {/* Template download */}
-      <Button variant="outline" size="sm" className="w-full" onClick={generateMedicinesTemplate}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={handleDownloadTemplate}
+        disabled={downloadingTemplate}
+      >
         <Download className="w-4 h-4 mr-2" />
-        Download Excel Template (.xlsx)
+        {downloadingTemplate ? 'Preparing template…' : 'Download Excel Template (.xlsx)'}
       </Button>
     </div>
   )

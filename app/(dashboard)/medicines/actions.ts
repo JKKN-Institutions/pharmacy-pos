@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { medicineSchema } from '@/lib/validators/medicine-schema'
+import { medicineSchema, VALID_UNITS } from '@/lib/validators/medicine-schema'
 import type { ParsedMedicineRow } from '@/lib/utils/parse-medicines-excel'
 import {
   buildFingerprint,
@@ -176,7 +176,7 @@ export async function bulkImportMedicinesAction(rows: ParsedMedicineRow[]): Prom
       branch_id: branch.id,
       name: row.name,
       company: row.company ?? null,
-      unit: row.unit ?? 'Strip',
+      unit: row.unit && (VALID_UNITS as readonly string[]).includes(row.unit) ? row.unit : null,
       unit_packing: row.unit_packing ?? null,
       category_id: row.category
         ? (catMap.get(row.category.toLowerCase().trim()) ?? null)
@@ -388,7 +388,7 @@ export async function prepareBulkImportAction(
       name: row.name,
       company: row.company ?? null,
       generic_name: row.generic_name ?? null,
-      unit: row.unit ?? 'Strip',
+      unit: row.unit && (VALID_UNITS as readonly string[]).includes(row.unit) ? row.unit : null,
       unit_packing: row.unit_packing ?? null,
       category_id: row.category
         ? (catMap.get(row.category.toLowerCase().trim()) ?? null)
@@ -453,4 +453,21 @@ export async function upsertMedicineBatchAction(
 /** Called once after all batches complete to flush the Next.js cache. */
 export async function finalizeMedicinesImportAction(): Promise<void> {
   revalidatePath('/medicines')
+}
+
+export async function getMedicineCategoryNamesAction(): Promise<string[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('branch_id')
+    .eq('auth_user_id', user?.id ?? '')
+    .single()
+  const { data: cats } = await supabase
+    .from('medicine_categories')
+    .select('name')
+    .eq('branch_id', profile?.branch_id ?? '')
+    .eq('is_active', true)
+    .order('name')
+  return (cats ?? []).map((c) => c.name)
 }

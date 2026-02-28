@@ -2,6 +2,7 @@
 
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -9,104 +10,150 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { User, Phone, Stethoscope, CreditCard, FileText } from 'lucide-react'
+import { User, Mail, Phone, Stethoscope, CreditCard, CalendarDays } from 'lucide-react'
 
 interface CustomerInfoProps {
   name: string
   onNameChange: (v: string) => void
+  email: string
+  onEmailChange: (v: string) => void
   phone: string
   onPhoneChange: (v: string) => void
   doctor: string
   onDoctorChange: (v: string) => void
+  billDate: string
+  onBillDateChange: (v: string) => void
   paymentMethod: 'cash' | 'upi' | 'card' | 'credit'
   onPaymentMethodChange: (v: 'cash' | 'upi' | 'card' | 'credit') => void
   note: string
   onNoteChange: (v: string) => void
 }
 
+// Reusable icon-adornment input group — same pattern as purchase form header
+function IconInput({
+  icon: Icon,
+  label,
+  required,
+  children,
+}: {
+  icon: React.ElementType
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div className="px-4 py-3 space-y-1.5">
+      <Label className="text-xs font-semibold text-muted-foreground">
+        {label}
+        {required && <span className="text-destructive ml-0.5">*</span>}
+      </Label>
+      <div className="flex rounded-md border overflow-hidden focus-within:ring-1 focus-within:ring-ring">
+        <div className="flex items-center px-3 bg-muted border-r shrink-0">
+          <Icon className="h-4 w-4 text-muted-foreground" />
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export function CustomerInfo({
   name, onNameChange,
+  email, onEmailChange,
   phone, onPhoneChange,
   doctor, onDoctorChange,
+  billDate, onBillDateChange,
   paymentMethod, onPaymentMethodChange,
   note, onNoteChange,
 }: CustomerInfoProps) {
   return (
-    <div className="bg-card border rounded-xl p-5 shadow-sm space-y-4">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-md bg-primary/10 flex items-center justify-center">
-          <User className="w-3.5 h-3.5 text-primary" />
-        </div>
-        <h3 className="text-sm font-semibold">Customer &amp; Payment</h3>
-        <span className="text-xs text-muted-foreground ml-1">(optional)</span>
-      </div>
+    <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <User className="w-3 h-3" /> Customer Name
-          </Label>
+      {/* Row 1: Name* | Email Address | Mobile Number */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60 border-b border-border/60">
+
+        <IconInput icon={User} label="Name" required>
           <Input
             value={name}
-            onChange={e => onNameChange(e.target.value)}
-            placeholder="Walk-in customer"
-            className="h-9"
+            onChange={(e) => onNameChange(e.target.value)}
+            placeholder="Name"
+            className="border-0 rounded-none flex-1 focus-visible:ring-0 shadow-none h-9"
           />
-        </div>
+        </IconInput>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Phone className="w-3 h-3" /> Phone
-          </Label>
+        <IconInput icon={Mail} label="Email Address">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => onEmailChange(e.target.value)}
+            placeholder="Email Address"
+            className="border-0 rounded-none flex-1 focus-visible:ring-0 shadow-none h-9"
+          />
+        </IconInput>
+
+        <IconInput icon={Phone} label="Mobile Number">
           <Input
             value={phone}
-            onChange={e => onPhoneChange(e.target.value)}
-            placeholder="10-digit number"
-            className="h-9"
+            onChange={(e) => onPhoneChange(e.target.value)}
+            placeholder="Mobile Number"
+            className="border-0 rounded-none flex-1 focus-visible:ring-0 shadow-none h-9"
           />
-        </div>
+        </IconInput>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Stethoscope className="w-3 h-3" /> Referring Doctor
-          </Label>
+      </div>
+
+      {/* Row 2: Doctor | Date | Payment Method */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border/60 border-b border-border/60">
+
+        <IconInput icon={Stethoscope} label="Doctor">
           <Input
             value={doctor}
-            onChange={e => onDoctorChange(e.target.value)}
-            placeholder="Doctor name"
-            className="h-9"
+            onChange={(e) => onDoctorChange(e.target.value)}
+            placeholder="Referring doctor"
+            className="border-0 rounded-none flex-1 focus-visible:ring-0 shadow-none h-9"
           />
-        </div>
+        </IconInput>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <CreditCard className="w-3 h-3" /> Payment Method
-          </Label>
-          <Select value={paymentMethod} onValueChange={v => onPaymentMethodChange(v as any)}>
-            <SelectTrigger className="h-9">
+        <IconInput icon={CalendarDays} label="Date">
+          <Input
+            type="date"
+            value={billDate}
+            onChange={(e) => onBillDateChange(e.target.value)}
+            className="border-0 rounded-none flex-1 focus-visible:ring-0 shadow-none h-9"
+          />
+        </IconInput>
+
+        <IconInput icon={CreditCard} label="Payment Method">
+          <Select
+            value={paymentMethod}
+            onValueChange={(v) => onPaymentMethodChange(v as 'cash' | 'upi' | 'card' | 'credit')}
+          >
+            <SelectTrigger className="border-0 rounded-none flex-1 focus:ring-0 shadow-none h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="cash">💵 Cash</SelectItem>
-              <SelectItem value="upi">📱 UPI</SelectItem>
-              <SelectItem value="card">💳 Card</SelectItem>
-              <SelectItem value="credit">🏦 Credit</SelectItem>
+              <SelectItem value="cash">Cash</SelectItem>
+              <SelectItem value="upi">UPI</SelectItem>
+              <SelectItem value="card">Card</SelectItem>
+              <SelectItem value="credit">Credit</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </IconInput>
 
-        <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
-          <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <FileText className="w-3 h-3" /> Note
-          </Label>
-          <Input
-            value={note}
-            onChange={e => onNoteChange(e.target.value)}
-            placeholder="Optional note for this bill..."
-            className="h-9"
-          />
-        </div>
       </div>
+
+      {/* Note — full width textarea */}
+      <div className="px-4 py-3 space-y-1.5">
+        <Label className="text-xs font-semibold text-muted-foreground">Note</Label>
+        <Textarea
+          value={note}
+          onChange={(e) => onNoteChange(e.target.value)}
+          placeholder="Once Goods Sold Can Not Be Taken Back"
+          rows={3}
+          className="resize-none text-sm border-border/60 focus-visible:ring-1"
+        />
+      </div>
+
     </div>
   )
 }

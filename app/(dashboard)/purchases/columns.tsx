@@ -3,65 +3,47 @@
 import { ColumnDef } from '@tanstack/react-table'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Eye } from 'lucide-react'
+import { MoreHorizontal, Eye, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { ConfirmDialog } from '@/components/ui/confirm-dialog'
 import { deletePurchaseAction } from './actions'
 import { toast } from 'sonner'
 import { formatINR } from '@/lib/utils/currency'
-import type { Purchase, PurchaseStatus } from '@/lib/types/database'
+import type { Purchase } from '@/lib/types/database'
 
-type PurchaseWithSupplier = Purchase & { suppliers?: { name: string } }
-
-const statusStyles: Record<PurchaseStatus, string> = {
-  received:
-    'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400',
-  returned:
-    'border-red-300 bg-red-50 text-red-600 dark:border-red-700 dark:bg-red-950/40 dark:text-red-400',
-  partial_return:
-    'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-400',
-}
-
-const statusLabel: Record<PurchaseStatus, string> = {
-  received: 'Received',
-  returned: 'Returned',
-  partial_return: 'Partial Return',
-}
+type PurchaseWithSupplier = Purchase & { suppliers?: { name: string }; supplier_name?: string }
 
 export const purchaseColumns: ColumnDef<PurchaseWithSupplier>[] = [
   {
-    accessorKey: 'invoice_no',
-    header: 'Invoice No.',
+    id: 'index',
+    header: '#',
     cell: ({ row }) => (
-      <div className="font-medium font-mono text-sm">
-        {row.getValue('invoice_no')}
-      </div>
+      <div className="text-sm text-muted-foreground text-center w-8">{row.index + 1}</div>
     ),
   },
   {
-    id: 'supplier',
-    header: 'Supplier',
+    accessorKey: 'supplier_name',
+    header: 'Supplier Name',
     cell: ({ row }) => (
-      <div className="text-sm font-medium max-w-[160px] truncate">
-        {row.original.suppliers?.name ?? '—'}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'purchase_date',
-    header: 'Date',
-    cell: ({ row }) => (
-      <div className="text-sm text-muted-foreground whitespace-nowrap">
-        {format(new Date(row.getValue('purchase_date')), 'dd MMM yyyy')}
-      </div>
+      <Link
+        href={`/purchases/${row.original.id}`}
+        className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400 max-w-[200px] truncate block"
+      >
+        {row.original.suppliers?.name ?? (row.getValue('supplier_name') as string) ?? '—'}
+      </Link>
     ),
   },
   {
     accessorKey: 'subtotal',
     header: () => <div className="text-right">Sub Total</div>,
     cell: ({ row }) => (
-      <div className="text-sm text-right text-muted-foreground">
+      <div className="text-sm text-right text-muted-foreground tabular-nums">
         {formatINR(row.getValue('subtotal'))}
       </div>
     ),
@@ -70,7 +52,7 @@ export const purchaseColumns: ColumnDef<PurchaseWithSupplier>[] = [
     accessorKey: 'tax',
     header: () => <div className="text-right">Tax</div>,
     cell: ({ row }) => (
-      <div className="text-sm text-right text-muted-foreground">
+      <div className="text-sm text-right text-muted-foreground tabular-nums">
         {formatINR(row.getValue('tax'))}
       </div>
     ),
@@ -81,13 +63,13 @@ export const purchaseColumns: ColumnDef<PurchaseWithSupplier>[] = [
     cell: ({ row }) => {
       const discount: number = row.getValue('discount')
       return (
-        <div className="text-sm text-right text-muted-foreground">
+        <div className="text-sm text-right tabular-nums">
           {discount > 0 ? (
             <span className="text-emerald-600 dark:text-emerald-400">
               −{formatINR(discount)}
             </span>
           ) : (
-            '—'
+            <span className="text-muted-foreground">{formatINR(0)}</span>
           )}
         </div>
       )
@@ -95,50 +77,59 @@ export const purchaseColumns: ColumnDef<PurchaseWithSupplier>[] = [
   },
   {
     accessorKey: 'total',
-    header: () => <div className="text-right">Total</div>,
+    header: () => <div className="text-right">Amount</div>,
     cell: ({ row }) => (
-      <div className="text-sm font-semibold text-right">
+      <div className="text-sm font-semibold text-right tabular-nums">
         {formatINR(row.getValue('total'))}
       </div>
     ),
   },
   {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.getValue<PurchaseStatus>('status')
-      return (
-        <Badge
-          variant="outline"
-          className={`text-xs whitespace-nowrap ${statusStyles[status] ?? ''}`}
-        >
-          {statusLabel[status] ?? status}
-        </Badge>
-      )
-    },
+    accessorKey: 'purchase_date',
+    header: 'Purchase Date',
+    cell: ({ row }) => (
+      <div className="text-sm text-muted-foreground whitespace-nowrap">
+        {format(new Date(row.getValue('purchase_date')), 'dd/MM/yyyy')}
+      </div>
+    ),
   },
   {
     id: 'actions',
     cell: ({ row }) => {
       const purchase = row.original
-      return (
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-            <Link href={`/purchases/${purchase.id}`}>
-              <Eye className="h-4 w-4" />
-            </Link>
-          </Button>
-          <ConfirmDialog
-            title="Delete purchase?"
-            description="Deleting this purchase will remove the associated stock batches."
-            onConfirm={async () => {
-              const result = await deletePurchaseAction(purchase.id)
-              if (result?.error) toast.error(result.error)
-              else toast.success('Purchase deleted')
-            }}
-          />
-        </div>
-      )
+      return <PurchaseRowActions purchase={purchase} />
     },
   },
 ]
+
+function PurchaseRowActions({ purchase }: { purchase: PurchaseWithSupplier }) {
+  return (
+    <div className="flex items-center gap-1">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <MoreHorizontal className="h-4 w-4" />
+            <span className="sr-only">Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link href={`/purchases/${purchase.id}`} className="flex items-center gap-2 cursor-pointer">
+              <Eye className="h-4 w-4" />
+              View
+            </Link>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ConfirmDialog
+        title="Delete purchase?"
+        description="Deleting this purchase will remove the associated stock batches and cannot be undone."
+        onConfirm={async () => {
+          const result = await deletePurchaseAction(purchase.id)
+          if (result?.error) toast.error(result.error)
+          else toast.success('Purchase deleted')
+        }}
+      />
+    </div>
+  )
+}

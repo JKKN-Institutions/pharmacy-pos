@@ -41,6 +41,10 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
+          // Prevents Referer header from leaking pharmacy patient/medicine data to external sites
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Pharmacy app: explicitly deny camera/mic access; allow geolocation for future delivery features
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=*, payment=()' },
         ],
       },
     ]

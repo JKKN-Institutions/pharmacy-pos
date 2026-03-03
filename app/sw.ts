@@ -38,6 +38,22 @@ const serwist = new Serwist({
   // service worker is still booting — reduces perceived latency for SSR pages.
   navigationPreload: true,
 
+  // Offline document fallback — when a page navigation fails (no network,
+  // server down), Serwist serves the precached /offline page instead of a
+  // browser error screen. /offline is auto-included in __SW_MANIFEST because
+  // it is a statically generated Next.js route (force-static).
+  fallbacks: {
+    entries: [
+      {
+        url: '/offline',
+        matcher({ request }) {
+          // Only intercept full page navigations (not fetch/XHR/assets)
+          return request.destination === 'document'
+        },
+      },
+    ],
+  },
+
   runtimeCaching: [
     // ── Supabase REST API ──────────────────────────────────────────────────
     // NetworkFirst: always try network, fall back to cache if offline.

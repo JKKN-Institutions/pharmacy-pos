@@ -13,7 +13,10 @@ export async function updateSession(request: NextRequest) {
 
   // Skip Supabase session refresh for public routes — prevents network errors
   // (e.g. "Connection closed") from surfacing on the login page itself.
-  const publicRoutes = ['/login', '/auth/callback']
+  // PWA assets (manifest, SW, offline page) must also be public so browsers can
+  // fetch them without auth — otherwise Chrome gets HTML instead of JSON for the
+  // manifest and shows "Manifest: Syntax error".
+  const publicRoutes = ['/login', '/auth/callback', '/manifest.webmanifest', '/sw.js', '/offline']
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next({ request })
   }

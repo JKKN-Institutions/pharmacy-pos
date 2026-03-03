@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { ServiceWorkerRegistration } from '@/components/pwa/service-worker-registration'
 import './globals.css'
 
 const geistSans = Geist({
@@ -63,6 +64,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <ServiceWorkerRegistration />
           {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>

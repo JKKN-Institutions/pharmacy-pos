@@ -46,6 +46,15 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
         purpose: 'any',
       },
+      // Chrome install dialog requires 192×192 and 512×512 with 'any' purpose.
+      // We declare the same file twice — once for 'any' (browsers, task switchers,
+      // install UI) and once for 'maskable' (Android adaptive icon safe-zone).
+      {
+        src: '/icons/icon-192x192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
       {
         src: '/icons/icon-192x192.png',
         sizes: '192x192',
@@ -55,6 +64,12 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         src: '/icons/icon-384x384.png',
         sizes: '384x384',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icons/icon-512x512.png',
+        sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },

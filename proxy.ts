@@ -12,8 +12,11 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization)
      * - favicon.ico (favicon)
-     * - public folder assets
+     * - manifest.webmanifest (PWA manifest — must be public for install prompt)
+     * - sw.js (service worker — must be fetchable without auth)
+     * - offline (offline fallback page — must load without network/auth)
+     * - public folder assets (images, icons, etc.)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest|sw\\.js|offline|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

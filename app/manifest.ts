@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    theme_color: '#16a34a',       // green-600 — matches pharmacy cross icon
+    theme_color: '#2563eb',       // blue-600 — matches app sidebar/brand color
     background_color: '#ffffff',
     categories: ['medical', 'productivity', 'business'],
     lang: 'en',
@@ -65,6 +65,12 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable',
       },
     ],
+    // Screenshots shown in the browser's install prompt (Chrome 111+, Edge 111+)
+    // Capture real screenshots and place in public/screenshots/ to activate this.
+    // screenshots: [
+    //   { src: '/screenshots/desktop.png', sizes: '1920x1080', type: 'image/png', form_factor: 'wide' },
+    //   { src: '/screenshots/mobile.png',  sizes: '390x844',   type: 'image/png', form_factor: 'narrow' },
+    // ],
     shortcuts: [
       {
         name: 'New Bill',

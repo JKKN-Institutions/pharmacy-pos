@@ -23,8 +23,8 @@ export const viewport: Viewport = {
   userScalable: true,
   viewportFit: 'cover',   // handles iPhone notch / safe area insets
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#16a34a' },
-    { media: '(prefers-color-scheme: dark)', color: '#15803d' },
+    { media: '(prefers-color-scheme: light)', color: '#2563eb' },
+    { media: '(prefers-color-scheme: dark)', color: '#1d4ed8' },
   ],
 }
 
@@ -38,9 +38,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
     title: 'Om Sakthi',
   },
-  // Apple touch icon shown when user "Add to Home Screen" on iOS
+  // Apple touch icon shown when user "Add to Home Screen" on iOS (180x180 per Apple spec)
   icons: {
-    apple: '/icons/icon-192x192.png',
+    apple: '/apple-touch-icon.png',
     icon: '/icons/icon-192x192.png',
   },
   formatDetection: {

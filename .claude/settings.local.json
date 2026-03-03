@@ -227,12 +227,9 @@
       "Bash(cd D:/Projects/MyJKKN && bun test __tests__/lib/api-keys/ 2>&1)",
       "Bash(cd /d/Projects/MyJKKN && bun test __tests__/lib/api-keys/ 2>&1)",
       "Bash(git:*)",
-<<<<<<< Updated upstream
       "Bash(rm:*)",
-      "mcp__supabase__deploy_edge_function"
-=======
+      "mcp__supabase__deploy_edge_function",
       "Bash(rm:*)"
->>>>>>> Stashed changes
     ],
     "deny": [],
     "ask": []

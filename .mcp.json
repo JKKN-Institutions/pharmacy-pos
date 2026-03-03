@@ -18,24 +18,14 @@
     },
     "memory": {
       "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-memory@latest"
-      ],
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-memory@latest"],
       "env": {
         "MEMORY_STORE_PATH": "D:\\MyJKKN\\.claude\\memory"
       }
     },
     "actor-critic-thinking": {
       "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "mcp-server-actor-critic-thinking"
-      ]
+      "args": ["/c", "npx", "-y", "mcp-server-actor-critic-thinking"]
     },
     "chrome-devtools": {
       "command": "cmd",
@@ -48,10 +38,7 @@
     },
     "next-devtools": {
       "command": "npx",
-      "args": [
-        "-y",
-        "next-devtools-mcp@latest"
-      ]
+      "args": ["-y", "next-devtools-mcp@latest"]
     }
   }
 }

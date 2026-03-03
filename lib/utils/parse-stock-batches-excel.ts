@@ -6,8 +6,9 @@ export interface ParsedStockBatchRow {
   expiry_date:   string   // normalized to YYYY-MM-DD
   purchase_price: number
   selling_price:  number
-  mrp:            number
   qty:            number
+  sold:           number
+  available:      number
   raw_row:        number
 }
 
@@ -16,9 +17,18 @@ export interface ParseStockResult {
   detectedHeaders: string[]   // raw header strings as they appear in the file
 }
 
+// Month-name → zero-padded numeric month
+const MONTH_MAP: Record<string, string> = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  january: '01', february: '02', march: '03', april: '04', june: '06',
+  july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
+}
+
 /**
  * Normalises common date formats to YYYY-MM-DD.
- * Handles: DD/MM/YYYY, DD-MM-YYYY, MM/YYYY (last day of month), YYYY-MM-DD.
+ * Handles: DD/MM/YYYY, DD-MM-YYYY, MM/YYYY (last day of month), YYYY-MM-DD,
+ *          MMM-YY, MMM-YYYY, MMM YY, MMM YYYY  (e.g. "Jan-27", "Jan-2027").
  */
 function parseExpiryDate(raw: string | null): string | null {
   if (!raw) return null
@@ -37,6 +47,18 @@ function parseExpiryDate(raw: string | null): string | null {
     const [, m, y] = my
     const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate()
     return `${y}-${m.padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+  }
+
+  // MMM-YY / MMM-YYYY / MMM YY / MMM YYYY  (e.g. "Jan-27", "Jan-2027")
+  const mmmy = s.match(/^([a-zA-Z]+)[/\-\s](\d{2,4})$/)
+  if (mmmy) {
+    const [, monthStr, yearStr] = mmmy
+    const m = MONTH_MAP[monthStr.toLowerCase()]
+    if (m) {
+      const y = yearStr.length === 2 ? `20${yearStr}` : yearStr
+      const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate()
+      return `${y}-${m}-${String(lastDay).padStart(2, '0')}`
+    }
   }
 
   const serial = parseInt(s, 10)
@@ -195,24 +217,37 @@ export function parseStockBatchesFile(
       r['sp']              ?? r['mrp'],
     )
 
-    // ── MRP (optional) ────────────────────────────────────────────────────────
-    const mrpRaw =
-      r['mrp'] ?? r['max retail price'] ?? r['maxretailprice'] ??
-      r['max price'] ?? r['maxprice'] ?? null
-    const mrp = mrpRaw ? (cleanNumber(mrpRaw) || selling_price) : selling_price
-
-    // ── Quantity ──────────────────────────────────────────────────────────────
+    // ── Quantity (total / initial stock) ─────────────────────────────────────
     const qty =
       parseInt(
         r['qty']           ?? r['quantity']       ??
         r['stock']         ?? r['stock qty']      ??
         r['stockqty']      ?? r['opening stock']  ??
         r['openingstock']  ?? r['opening qty']    ??
-        r['openingqty']    ?? r['available qty']  ??
-        r['availableqty']  ?? r['available']      ?? '0',
+        r['openingqty']    ?? '0',
         10,
       ) || 0
     if (qty <= 0) continue
+
+    // ── Sold quantity (optional) ───────────────────────────────────────────
+    const sold =
+      parseInt(
+        r['sold']         ?? r['sold qty']      ??
+        r['soldqty']      ?? r['qty sold']      ??
+        r['qtysold']      ?? '0',
+        10,
+      ) || 0
+
+    // ── Available quantity (optional, defaults to qty - sold) ──────────────
+    const availableRaw = parseInt(
+      r['available']         ?? r['available qty']  ??
+      r['availableqty']      ?? r['avail qty']      ??
+      r['availqty']          ?? r['avail']          ?? '',
+      10,
+    )
+    const available = !isNaN(availableRaw) && availableRaw >= 0
+      ? availableRaw
+      : Math.max(0, qty - sold)
 
     result.push({
       medicine_name,
@@ -220,8 +255,9 @@ export function parseStockBatchesFile(
       expiry_date,
       purchase_price,
       selling_price,
-      mrp,
       qty,
+      sold,
+      available,
       raw_row: i + 1,
     })
   }

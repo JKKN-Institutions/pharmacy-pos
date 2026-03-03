@@ -63,7 +63,8 @@ export default async function AccountsPage() {
   const totalCollected = ledger.reduce((s, c) => s + c.totalPaid, 0)
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-card rounded-2xl border shadow-sm p-5 sm:p-6 space-y-6">
       <PageHeader title="Accounts / Credit Ledger" description="Customer credit invoices and outstanding balances" />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard icon={<BookOpen className="w-5 h-5 text-green-600 dark:text-green-400" />} iconBg="bg-green-100 dark:bg-green-900/30" label="Total Invoiced" value={formatINR(totalInvoicedAmt)} />
@@ -132,6 +133,7 @@ export default async function AccountsPage() {
             </div>
           </div>
         </div></CardContent></Card>
+      </div>{/* end white card */}
     </div>
   )
 }

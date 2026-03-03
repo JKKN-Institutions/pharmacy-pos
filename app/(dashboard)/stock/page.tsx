@@ -85,21 +85,23 @@ export default async function StockPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={title} description={description}>
-        <StockBulkImportButton />
-      </PageHeader>
+      <div className="bg-white dark:bg-card rounded-2xl border shadow-sm p-5 sm:p-6 space-y-5">
+        <PageHeader title={title} description={description}>
+          <StockBulkImportButton />
+        </PageHeader>
 
-      <StockDataTable
-        columns={stockColumns}
-        data={data}
-        totalCount={totalCount}
-        initialPage={page}
-        initialPageSize={pageSize}
-        initialSearch={search}
-        initialView={view}
-        initialSort={sortCol}
-        initialOrder={ascending ? 'asc' : 'desc'}
-      />
+        <StockDataTable
+          columns={stockColumns}
+          data={data}
+          totalCount={totalCount}
+          initialPage={page}
+          initialPageSize={pageSize}
+          initialSearch={search}
+          initialView={view}
+          initialSort={sortCol}
+          initialOrder={ascending ? 'asc' : 'desc'}
+        />
+      </div>
     </div>
   )
 }

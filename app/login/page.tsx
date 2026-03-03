@@ -141,7 +141,7 @@ export default function LoginPage() {
           <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center shadow-md">
             <Pill className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-lg tracking-tight">Pharmacy POS</span>
+          <span className="font-bold text-lg tracking-tight">Om Sakthi Medicals</span>
         </div>
 
         {/* ── Center hero ── */}
@@ -198,7 +198,7 @@ export default function LoginPage() {
           className="animate-fade-up relative z-10 text-center text-[11px] text-green-200/70 px-10 pb-8"
           style={{ animationDelay: '750ms' }}
         >
-          © 2026 Pharmacy POS. All rights reserved.
+          © 2026 Om Sakthi Medicals. All rights reserved.
         </p>
       </div>
 
@@ -220,7 +220,7 @@ export default function LoginPage() {
             <div className="w-8 h-8 rounded-lg bg-green-600 flex items-center justify-center shadow-md">
               <Pill className="w-4 h-4 text-white" />
             </div>
-            <span className="font-bold text-gray-800">Pharmacy POS</span>
+            <span className="font-bold text-gray-800">Om Sakthi Medicals</span>
           </div>
 
           {/* Heading */}

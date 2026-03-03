@@ -107,6 +107,7 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
     }
 
     const fefo = availableBatches[0]
+    const salePrice = Number(fefo.sale_price)
     const item: BillItem = {
       id: crypto.randomUUID(),
       medicine_id: medicine.id,
@@ -114,13 +115,13 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
       stock_batch_id: fefo.id,
       batch_no: fefo.batch_no,
       expiry_date: fefo.expiry_date,
-      available_qty: fefo.available_qty,
+      available_qty: Number(fefo.available_qty),
       qty: 1,
-      sale_price: fefo.sale_price,
+      sale_price: salePrice,
       discount_type: 'percent',
       discount_value: 0,
-      tax: medicine.tax_percent ?? 0,
-      price: fefo.sale_price,
+      tax: Number(medicine.tax_percent ?? 0),
+      price: salePrice,
     }
 
     onAddItem(item)

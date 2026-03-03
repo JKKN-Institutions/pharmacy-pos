@@ -15,7 +15,7 @@ export default async function NewPurchasePage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="New Purchase" description="Record a new stock purchase from supplier">
+      <PageHeader title="New Purchase" description="Record a new stock purchase from supplier" inline>
         <Button variant="outline" size="sm" asChild>
           <Link href="/purchases"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
         </Button>

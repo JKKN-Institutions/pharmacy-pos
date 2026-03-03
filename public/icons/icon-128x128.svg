@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#15803d"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <linearGradient id="cross" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#dcfce7" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded rect -->
+  <rect width="128" height="128" rx="26" fill="url(#bg)"/>
+  <!-- Vertical arm of cross -->
+  <rect x="52.5" y="29" width="23" height="70" rx="7" fill="url(#cross)"/>
+  <!-- Horizontal arm of cross -->
+  <rect x="29" y="52.5" width="70" height="23" rx="7" fill="url(#cross)"/>
+  <!-- Small Rx text mark for pharmacy identity -->
+  <text x="113" y="117" font-family="system-ui,sans-serif" font-size="17" font-weight="700" fill="white" text-anchor="end" opacity="0.85">Rx</text>
+</svg>

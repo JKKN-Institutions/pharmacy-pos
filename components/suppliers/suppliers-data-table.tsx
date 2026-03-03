@@ -236,8 +236,8 @@ export function SuppliersDataTable({
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
 
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
+        {/* Search — full width on mobile */}
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search suppliers…"
@@ -269,8 +269,8 @@ export function SuppliersDataTable({
           </Button>
         )}
 
-        {/* Right-side controls */}
-        <div className="sm:ml-auto flex items-center gap-2">
+        {/* Right-side controls — full-width space-between on mobile, auto on desktop */}
+        <div className="flex items-center gap-2 w-full justify-between sm:w-auto sm:ml-auto sm:justify-start">
           {/* Rows per page */}
           <Select value={String(initialPageSize)} onValueChange={handlePageSizeChange}>
             <SelectTrigger className="w-[110px] h-9 text-sm">

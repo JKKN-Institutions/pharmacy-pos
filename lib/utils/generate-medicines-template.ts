@@ -12,17 +12,20 @@ export async function generateMedicinesTemplate(categories: string[] = []): Prom
   // ── Sheet 1: Medicines Import ──────────────────────────────────────────────
   const ws = wb.addWorksheet('Medicines Import')
 
+  // Column order matches the legacy system export exactly:
+  // Medicine | Company | Unit | Unit/Packing | Category | Storebox | Reorderlevel | Live Stock | Status | Generic Name | Tax%
   ws.columns = [
-    { header: 'Medicine',     key: 'medicine',     width: 40 },
-    { header: 'Company',      key: 'company',      width: 20 },
-    { header: 'Unit',         key: 'unit',         width: 14 },
-    { header: 'Unit/Packing', key: 'unitPacking',  width: 16 },
-    { header: 'Category',     key: 'category',     width: 18 },
-    { header: 'Storebox',     key: 'storebox',     width: 14 },
-    { header: 'Reorderlevel', key: 'reorderlevel', width: 14 },
-    { header: 'Status',       key: 'status',       width: 12 },
-    { header: 'Generic Name', key: 'genericName',  width: 24 },
-    { header: 'Tax%',         key: 'tax',          width: 8  },
+    { header: 'Medicine',     key: 'medicine',     width: 40 },  // A
+    { header: 'Company',      key: 'company',      width: 20 },  // B
+    { header: 'Unit',         key: 'unit',         width: 14 },  // C
+    { header: 'Unit/Packing', key: 'unitPacking',  width: 16 },  // D
+    { header: 'Category',     key: 'category',     width: 18 },  // E
+    { header: 'Storebox',     key: 'storebox',     width: 14 },  // F
+    { header: 'Reorderlevel', key: 'reorderlevel', width: 14 },  // G
+    { header: 'Live Stock',   key: 'liveStock',    width: 12 },  // H — read-only/informational
+    { header: 'Status',       key: 'status',       width: 12 },  // I
+    { header: 'Generic Name', key: 'genericName',  width: 24 },  // J
+    { header: 'Tax%',         key: 'tax',          width: 8  },  // K
   ]
 
   // Style the header row — blue fill, white bold text, center-aligned
@@ -32,10 +35,10 @@ export async function generateMedicinesTemplate(categories: string[] = []): Prom
     cell.alignment = { horizontal: 'center', vertical: 'middle' }
   })
 
-  // 3 example rows with realistic pharmacy data
-  ws.addRow(['PARACETAMOL 500MG TAB', 'Cipla Ltd',  'Tablet',  'Strip of 10',  'Analgesic',   'Rack A-1', 20, 'Normal', 'Paracetamol',      5 ])
-  ws.addRow(['AMOXICILLIN 250MG CAP', 'Sun Pharma', 'Capsule', 'Strip of 10',  'Antibiotic',  'Rack B-2', 15, 'Normal', 'Amoxicillin',      12])
-  ws.addRow(['COUGH SYRUP 100ML',     'Mankind',    'Syrup',   'Bottle 100ml', 'Respiratory', 'Rack C-1', 10, 'Normal', 'Dextromethorphan', 12])
+  // 3 example rows with realistic pharmacy data (Live Stock added at position 8)
+  ws.addRow(['PARACETAMOL 500MG TAB', 'Cipla Ltd',  'Tablet',  'Strip of 10',  'Analgesic',   'Rack A-1', 20, 150, 'Normal', 'Paracetamol',      5 ])
+  ws.addRow(['AMOXICILLIN 250MG CAP', 'Sun Pharma', 'Capsule', 'Strip of 10',  'Antibiotic',  'Rack B-2', 15,  80, 'Normal', 'Amoxicillin',      12])
+  ws.addRow(['COUGH SYRUP 100ML',     'Mankind',    'Syrup',   'Bottle 100ml', 'Respiratory', 'Rack C-1', 10,   8, 'Normal', 'Dextromethorphan', 12])
 
   // ── Enforced dropdown validations ─────────────────────────────────────────
   // exceljs's Worksheet type definition omits `dataValidations` in its @types,
@@ -44,7 +47,7 @@ export async function generateMedicinesTemplate(categories: string[] = []): Prom
   const unitFormula  = `"${VALID_UNITS.join(',')}"`
   const taxFormula   = `"${VALID_GST_SLABS.join(',')}"`
 
-  // Unit — column C (index 3, 1-based)
+  // Unit — column C
   wsAny.dataValidations.add('C2:C10000', {
     type: 'list',
     allowBlank: true,
@@ -55,8 +58,8 @@ export async function generateMedicinesTemplate(categories: string[] = []): Prom
     error: `Unit must be one of: ${VALID_UNITS.join(', ')}`,
   })
 
-  // Status — column H (index 8, 1-based)
-  wsAny.dataValidations.add('H2:H10000', {
+  // Status — column I (shifted from H after adding Live Stock at H)
+  wsAny.dataValidations.add('I2:I10000', {
     type: 'list',
     allowBlank: true,
     formulae: ['"Normal,Inactive"'],
@@ -66,7 +69,7 @@ export async function generateMedicinesTemplate(categories: string[] = []): Prom
     error: 'Status must be Normal or Inactive',
   })
 
-  // Category — column E (index 5, 1-based) — only add dropdown when DB names are available
+  // Category — column E — only add dropdown when DB names are available
   if (categories.length > 0) {
     const catFormula = `"${categories.join(',')}"`
     wsAny.dataValidations.add('E2:E10000', {
@@ -79,8 +82,8 @@ export async function generateMedicinesTemplate(categories: string[] = []): Prom
     })
   }
 
-  // Tax% — column J (index 10, 1-based)
-  wsAny.dataValidations.add('J2:J10000', {
+  // Tax% — column K (shifted from J after adding Live Stock at H)
+  wsAny.dataValidations.add('K2:K10000', {
     type: 'list',
     allowBlank: true,
     formulae: [taxFormula],
@@ -108,6 +111,7 @@ export async function generateMedicinesTemplate(categories: string[] = []): Prom
     ['Category',     categories.length > 0 ? categories.join(', ') : '(any text)', categories.length > 0 ? 'Pick from dropdown — new names are auto-created' : 'Created automatically if not found'],
     ['Storebox',     '(any text)',                        'e.g. Rack A-1, Shelf B'],
     ['Reorderlevel', '(number)',                          'Defaults to 20 if blank'],
+    ['Live Stock',   '(number)',                          'Informational only — NOT imported. Shows current stock from legacy system for review.'],
     ['Status',       'Normal, Inactive',                  'Normal = active medicine'],
     ['Generic Name', '(any text)',                        'Optional, used for duplicate detection'],
     ['Tax%',         VALID_GST_SLABS.join(', '),         'Indian GST slabs only'],

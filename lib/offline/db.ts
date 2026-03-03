@@ -25,6 +25,7 @@ interface OfflineBill {
     payment_method: string
     items: Array<{
       medicine_id: string
+      medicine_name: string | null
       stock_batch_id: string
       batch_no: string
       expiry_date: string

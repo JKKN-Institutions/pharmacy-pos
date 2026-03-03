@@ -189,8 +189,8 @@ export function StockDataTable({
       {/* ── Toolbar ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
 
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
+        {/* Search — full width on mobile */}
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search medicine name…"
@@ -209,32 +209,35 @@ export function StockDataTable({
           )}
         </div>
 
-        {/* View filter */}
-        <Select value={initialView} onValueChange={handleViewChange}>
-          <SelectTrigger className="w-[140px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="live">Live Stock</SelectItem>
-            <SelectItem value="expired">Expired</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Filters — flex-wrap row on mobile, transparent on desktop */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:contents">
+          {/* View filter */}
+          <Select value={initialView} onValueChange={handleViewChange}>
+            <SelectTrigger className="flex-1 min-w-[130px] sm:flex-none sm:w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="live">Live Stock</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Clear filters */}
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear
-          </Button>
-        )}
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </Button>
+          )}
+        </div>
 
-        {/* Right controls */}
-        <div className="sm:ml-auto flex items-center gap-2">
+        {/* Right controls — full-width space-between on mobile, auto on desktop */}
+        <div className="flex items-center gap-2 w-full justify-between sm:w-auto sm:ml-auto sm:justify-start">
           <Select value={String(initialPageSize)} onValueChange={handlePageSizeChange}>
             <SelectTrigger className="w-[110px] h-9 text-sm">
               <SelectValue />

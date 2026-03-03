@@ -18,11 +18,11 @@ import type { PosBill } from '@/lib/types/database'
 
 type BillItem = {
   id: string
+  medicine_name: string | null
   batch_no: string
   qty: number
   sale_price: number
   price: number
-  medicines: { name: string } | null
 }
 
 const statusStyles: Record<string, string> = {
@@ -143,7 +143,7 @@ export function BillViewDialog({ bill }: BillViewDialogProps) {
                   <tbody>
                     {items.map((item, i) => (
                       <tr key={item.id} className={`border-b last:border-0 ${i % 2 === 1 ? 'bg-muted/20' : ''}`}>
-                        <td className="px-3 py-2 font-medium">{item.medicines?.name ?? '—'}</td>
+                        <td className="px-3 py-2 font-medium">{item.medicine_name ?? '—'}</td>
                         <td className="px-3 py-2 text-muted-foreground font-mono text-xs">{item.batch_no}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{item.qty}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{formatINR(item.sale_price)}</td>

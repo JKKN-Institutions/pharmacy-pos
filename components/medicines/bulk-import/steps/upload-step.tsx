@@ -108,6 +108,7 @@ export function UploadStep({ onFileLoaded }: UploadStepProps) {
             { label: 'Category',     required: false },
             { label: 'Storebox',     required: false },
             { label: 'Reorderlevel', required: false },
+            { label: 'Live Stock',   required: false },
             { label: 'Status',       required: false },
             { label: 'Generic Name', required: false },
             { label: 'Tax%',         required: false },

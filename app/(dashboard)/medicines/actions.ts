@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { medicineSchema, VALID_UNITS } from '@/lib/validators/medicine-schema'
+import { medicineSchema } from '@/lib/validators/medicine-schema'
 import type { ParsedMedicineRow } from '@/lib/utils/parse-medicines-excel'
 import {
   buildFingerprint,
@@ -176,7 +176,7 @@ export async function bulkImportMedicinesAction(rows: ParsedMedicineRow[]): Prom
       branch_id: branch.id,
       name: row.name,
       company: row.company ?? null,
-      unit: row.unit && (VALID_UNITS as readonly string[]).includes(row.unit) ? row.unit : null,
+      unit: row.unit ?? null,
       unit_packing: row.unit_packing ?? null,
       category_id: row.category
         ? (catMap.get(row.category.toLowerCase().trim()) ?? null)
@@ -388,7 +388,7 @@ export async function prepareBulkImportAction(
       name: row.name,
       company: row.company ?? null,
       generic_name: row.generic_name ?? null,
-      unit: row.unit && (VALID_UNITS as readonly string[]).includes(row.unit) ? row.unit : null,
+      unit: row.unit ?? null,
       unit_packing: row.unit_packing ?? null,
       category_id: row.category
         ? (catMap.get(row.category.toLowerCase().trim()) ?? null)

@@ -49,6 +49,7 @@ export function PreviewStep({ rows, filename, onBack, onNext }: PreviewStepProps
               <TableHead className="text-xs">Company</TableHead>
               <TableHead className="text-xs">Unit</TableHead>
               <TableHead className="text-xs">Category</TableHead>
+              <TableHead className="text-xs text-right">Live Stock</TableHead>
               <TableHead className="text-xs">Tax%</TableHead>
               <TableHead className="text-xs pr-6">Status</TableHead>
             </TableRow>
@@ -71,6 +72,9 @@ export function PreviewStep({ rows, filename, onBack, onNext }: PreviewStepProps
                 <TableCell className="text-xs">{row.unit ?? '—'}</TableCell>
                 <TableCell className="text-xs text-muted-foreground max-w-[120px]">
                   <div className="truncate">{row.category ?? '—'}</div>
+                </TableCell>
+                <TableCell className="text-xs tabular-nums text-right">
+                  {row.live_stock != null ? row.live_stock.toLocaleString() : '—'}
                 </TableCell>
                 <TableCell className="text-xs tabular-nums">
                   {row.tax_percent != null ? `${row.tax_percent}%` : '—'}

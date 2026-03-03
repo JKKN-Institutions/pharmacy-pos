@@ -269,8 +269,8 @@ export function MedicinesDataTable({
       {/* ── Filter / toolbar row ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
 
-        {/* Search */}
-        <div className="relative flex-1 max-w-sm">
+        {/* Search — full width on mobile */}
+        <div className="relative w-full sm:flex-1 sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder="Search medicine name…"
@@ -289,33 +289,36 @@ export function MedicinesDataTable({
           )}
         </div>
 
-        {/* Status filter */}
-        <Select value={initialStatus || 'all'} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="All Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Filters row — full-width flex-wrap on mobile */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:contents">
+          {/* Status filter */}
+          <Select value={initialStatus || 'all'} onValueChange={handleStatusChange}>
+            <SelectTrigger className="flex-1 min-w-[130px] sm:flex-none sm:w-[150px]">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Clear filters */}
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear filters
-          </Button>
-        )}
+          {/* Clear filters */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearFilters}
+              className="h-9 gap-1.5 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </Button>
+          )}
+        </div>
 
-        {/* Right-side controls */}
-        <div className="sm:ml-auto flex items-center gap-2">
+        {/* Right-side controls — full-width space-between on mobile, auto on desktop */}
+        <div className="flex items-center gap-2 w-full justify-between sm:w-auto sm:ml-auto sm:justify-start">
           {/* Rows per page */}
           <Select value={String(initialPageSize)} onValueChange={handlePageSizeChange}>
             <SelectTrigger className="w-[110px] h-9 text-sm">

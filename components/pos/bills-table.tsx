@@ -255,17 +255,17 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
   return (
     <div className="space-y-3">
 
-      {/* ── Primary toolbar: Show N entries (left) + Search (right) ─────────── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      {/* ── Primary toolbar: Show entries + Search (single row on all sizes) ─ */}
+      <div className="flex items-center gap-2">
 
-        {/* Show N entries */}
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">Show</span>
+        {/* Show N entries — compact on mobile */}
+        <div className="flex items-center gap-1.5 text-sm shrink-0">
+          <span className="hidden sm:inline text-muted-foreground">Show</span>
           <Select
             value={String(pagination.pageSize)}
             onValueChange={(v) => setPagination({ pageIndex: 0, pageSize: Number(v) })}
           >
-            <SelectTrigger className="h-8 w-[68px]">
+            <SelectTrigger className="h-8 w-[60px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -274,119 +274,37 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
               ))}
             </SelectContent>
           </Select>
-          <span className="text-muted-foreground">entries</span>
+          <span className="hidden sm:inline text-muted-foreground">entries</span>
         </div>
 
-        {/* Search */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Search:</span>
-          <div className="relative">
-            <Input
-              placeholder="Bill no / customer..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPagination((p) => ({ ...p, pageIndex: 0 }))
-              }}
-              className="h-8 w-52 pr-7"
-            />
-            {search && (
-              <button
-                onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Secondary toolbar: Filters + Date + Export ──────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 pb-1">
-
-        {/* Status */}
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="saved">Saved</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Payment */}
-        <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
-          <SelectTrigger className="h-8 w-[130px] text-xs">
-            <SelectValue placeholder="Payment" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Payments</SelectItem>
-            <SelectItem value="cash">Cash</SelectItem>
-            <SelectItem value="upi">UPI</SelectItem>
-            <SelectItem value="card">Card</SelectItem>
-            <SelectItem value="credit">Credit</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Date range */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className={cn(
-                'h-8 px-3 gap-1.5 text-xs font-normal',
-                !dateRange?.from && 'text-muted-foreground'
-              )}
+        {/* Search — takes all remaining space on mobile */}
+        <div className="relative flex-1">
+          <Input
+            placeholder="Bill no / customer..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPagination((p) => ({ ...p, pageIndex: 0 }))
+            }}
+            className="h-8 w-full pr-7"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
-              <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate max-w-[140px]">
-                {dateLabel ?? 'Date range'}
-              </span>
-              {dateRange?.from && (
-                <X
-                  className="ml-1 h-3 w-3 opacity-60 hover:opacity-100 shrink-0"
-                  onClick={(e) => { e.stopPropagation(); setDateRange(undefined) }}
-                />
-              )}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={dateRange}
-              onSelect={setDateRange}
-              numberOfMonths={2}
-              disabled={{ after: new Date() }}
-              captionLayout="dropdown"
-            />
-          </PopoverContent>
-        </Popover>
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
 
-        {/* Reset */}
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearAll}
-            className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-3 w-3" />
-            Reset
-          </Button>
-        )}
-
-        {/* Export */}
+        {/* Export — icon-only on mobile, full label on desktop */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs ml-auto">
+            <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-xs">
               <Download className="h-3.5 w-3.5" />
-              Export
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              <span className="hidden sm:inline">Export</span>
+              <ChevronDown className="hidden sm:inline h-3 w-3 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
@@ -410,6 +328,86 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+      </div>
+
+      {/* ── Filter row: 2-col grid on mobile, flex-wrap on desktop ──────────── */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center pb-1">
+
+        {/* Status */}
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
+          <SelectTrigger className="h-8 w-full sm:w-[130px] text-xs">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="saved">Saved</SelectItem>
+            <SelectItem value="paid">Paid</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Payment */}
+        <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
+          <SelectTrigger className="h-8 w-full sm:w-[130px] text-xs">
+            <SelectValue placeholder="Payment" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Payments</SelectItem>
+            <SelectItem value="cash">Cash</SelectItem>
+            <SelectItem value="upi">UPI</SelectItem>
+            <SelectItem value="card">Card</SelectItem>
+            <SelectItem value="credit">Credit</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Date range — full width on mobile */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={cn(
+                'h-8 px-3 gap-1.5 text-xs font-normal col-span-2 sm:col-span-1 justify-start sm:justify-center',
+                !dateRange?.from && 'text-muted-foreground'
+              )}
+            >
+              <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">
+                {dateLabel ?? 'Date range'}
+              </span>
+              {dateRange?.from && (
+                <X
+                  className="ml-auto h-3 w-3 opacity-60 hover:opacity-100 shrink-0"
+                  onClick={(e) => { e.stopPropagation(); setDateRange(undefined) }}
+                />
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="range"
+              selected={dateRange}
+              onSelect={setDateRange}
+              numberOfMonths={1}
+              disabled={{ after: new Date() }}
+              captionLayout="dropdown"
+            />
+          </PopoverContent>
+        </Popover>
+
+        {/* Reset — full width on mobile, auto on desktop */}
+        {hasFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAll}
+            className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground col-span-2 sm:col-span-1 w-full sm:w-auto"
+          >
+            <X className="h-3 w-3" />
+            Reset filters
+          </Button>
+        )}
 
       </div>
 

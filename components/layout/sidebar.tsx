@@ -105,7 +105,7 @@ function NavGroup({
   if (visible.length === 0) return null
 
   return (
-    <SidebarGroup className="py-1">
+    <SidebarGroup className="px-2 py-1">
       {label && <GroupLabel>{label}</GroupLabel>}
       <SidebarGroupContent>
         <SidebarMenu>
@@ -146,7 +146,7 @@ function AdminGroup({ userRole, pathname }: { userRole: string; pathname: string
     pathname === '/medicine-categories'
 
   return (
-    <SidebarGroup className="py-1">
+    <SidebarGroup className="px-2 py-1">
       {showUsers && <GroupLabel>Admin</GroupLabel>}
       <SidebarGroupContent>
         <SidebarMenu>
@@ -223,17 +223,17 @@ export function AppSidebar({ userRole }: { userRole: string }) {
       <SidebarHeader className="border-b border-sidebar-border pb-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild tooltip="PharmaPOS">
+            <SidebarMenuButton size="lg" asChild tooltip="Om Sakthi Medicals">
               <Link href="/dashboard">
                 {/* Green gradient pill icon */}
-                <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-green-700 text-white shadow-sm shadow-green-600/20">
-                  <Pill className="size-5" />
+                <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[oklch(0.62_0.20_150)] to-[var(--color-sidebar-primary)] shadow-sm shadow-[var(--color-sidebar-primary)]/20">
+                  <Pill className="size-5 text-white" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-bold tracking-tight text-sm">PharmaPOS</span>
+                  <span className="font-bold tracking-tight text-sm">Om Sakthi Medicals</span>
                   <span className="flex items-center gap-1.5 text-[11px] text-sidebar-foreground/50">
                     {/* Online status dot */}
-                    <span className="size-1.5 shrink-0 rounded-full bg-emerald-500" />
+                    <span className="size-1.5 shrink-0 rounded-full bg-[var(--color-sidebar-primary)]" />
                     Pharmacy Manager
                   </span>
                 </div>
@@ -244,7 +244,7 @@ export function AppSidebar({ userRole }: { userRole: string }) {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className="overflow-x-hidden scrollbar-hidden scroll-smooth py-2">
+      <SidebarContent className="overflow-x-hidden overflow-y-auto scrollbar-hidden scroll-smooth py-2">
         <NavGroup items={mainNavItems} userRole={userRole} pathname={pathname} />
         <SidebarSeparator className="mx-3 my-1 opacity-50" />
         <NavGroup label="Inventory" items={inventoryItems} userRole={userRole} pathname={pathname} />
@@ -258,7 +258,7 @@ export function AppSidebar({ userRole }: { userRole: string }) {
       <SidebarFooter className="border-t border-sidebar-border py-3">
         <div className="px-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-sidebar-foreground/25">
-            PharmaPOS &middot; v2.0
+            Om Sakthi Medicals &middot; v2.0
           </p>
         </div>
       </SidebarFooter>

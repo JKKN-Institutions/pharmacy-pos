@@ -28,7 +28,10 @@ import { deleteMedicineAction } from './actions'
 import { toast } from 'sonner'
 import type { Medicine } from '@/lib/types/database'
 
-type MedicineRow = Medicine & { medicine_categories?: { name: string } | null }
+type MedicineRow = Medicine & {
+  medicine_categories?: { name: string } | null
+  live_stock?: number   // sum of active stock_batches.available_qty, joined in page.tsx
+}
 
 // ─── Row actions component ────────────────────────────────────────────────────
 // Kept as a named component so React state is stable across table re-renders
@@ -253,6 +256,42 @@ export const medicineColumns: ColumnDef<MedicineRow>[] = [
         {row.getValue('reorder_level')}
       </div>
     ),
+  },
+  {
+    id: 'live_stock',
+    header: ({ column }) => (
+      <div className="text-right">
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          className="-mr-3 h-8 gap-1.5 font-semibold text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        >
+          <ArrowUpDown className="h-3.5 w-3.5" />
+          Live Stock
+        </Button>
+      </div>
+    ),
+    cell: ({ row }) => {
+      const stock = row.original.live_stock ?? 0
+      const minLevel = row.original.min_level ?? 0
+      const reorderLevel = row.original.reorder_level ?? 0
+
+      let badgeClass = 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+      if (stock <= minLevel) {
+        badgeClass = 'border-red-300 bg-red-50 text-red-700 dark:border-red-700 dark:bg-red-950/40 dark:text-red-400'
+      } else if (stock <= reorderLevel) {
+        badgeClass = 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-400'
+      }
+
+      return (
+        <div className="flex justify-end pr-1">
+          <Badge variant="outline" className={`text-xs tabular-nums font-medium px-2 py-0.5 ${badgeClass}`}>
+            {stock.toLocaleString()}
+          </Badge>
+        </div>
+      )
+    },
+    sortingFn: (a, b) => (a.original.live_stock ?? 0) - (b.original.live_stock ?? 0),
   },
   {
     accessorKey: 'status',

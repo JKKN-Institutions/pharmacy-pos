@@ -46,23 +46,25 @@ export default async function SuppliersPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Suppliers"
-        description={`${count ?? 0} supplier${(count ?? 0) !== 1 ? 's' : ''} registered`}
-      >
-        <SupplierFormDialog />
-      </PageHeader>
+      <div className="bg-white dark:bg-card rounded-2xl border shadow-sm p-5 sm:p-6 space-y-5">
+        <PageHeader
+          title="Suppliers"
+          description={`${count ?? 0} supplier${(count ?? 0) !== 1 ? 's' : ''} registered`}
+        >
+          <SupplierFormDialog />
+        </PageHeader>
 
-      <SuppliersDataTable
-        columns={supplierColumns}
-        data={suppliers ?? []}
-        totalCount={count ?? 0}
-        initialPage={page}
-        initialPageSize={pageSize}
-        initialSearch={params.search ?? ''}
-        initialSort={params.sort ?? ''}
-        initialOrder={(params.order as 'asc' | 'desc') ?? 'asc'}
-      />
+        <SuppliersDataTable
+          columns={supplierColumns}
+          data={suppliers ?? []}
+          totalCount={count ?? 0}
+          initialPage={page}
+          initialPageSize={pageSize}
+          initialSearch={params.search ?? ''}
+          initialSort={params.sort ?? ''}
+          initialOrder={(params.order as 'asc' | 'desc') ?? 'asc'}
+        />
+      </div>
     </div>
   )
 }

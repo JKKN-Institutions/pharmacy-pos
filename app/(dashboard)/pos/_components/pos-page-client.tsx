@@ -9,8 +9,6 @@ import {
   TrendingUp,
   Clock,
   ShoppingCart,
-  LayoutDashboard,
-  ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -88,29 +86,14 @@ export function PosPageClient({
     return (
       <div className="space-y-5">
 
-        {/* Breadcrumb-style header */}
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-              <LayoutDashboard className="w-3 h-3" />
-              <span>Dashboard</span>
-              <ChevronRight className="w-3 h-3" />
-              <button
-                onClick={() => setView('history')}
-                className="hover:text-primary transition-colors"
-              >
-                POS/Bill
-              </button>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-foreground font-medium">New Bill</span>
-            </div>
-            <h1 className="text-xl font-bold tracking-tight">New Bill</h1>
-          </div>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold tracking-tight">New Bill</h1>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setView('history')}
-            className="h-8 gap-1.5 self-start sm:self-auto"
+            className="h-8 gap-1.5"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to POS/Bill
@@ -139,44 +122,38 @@ export function PosPageClient({
   return (
     <div className="space-y-6">
 
-      {/* ── Page header: POS/Bill title + breadcrumb + New Bill button ────── */}
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+      {/* ── Page header: POS/Bill title + New Bill button (desktop) ─── */}
+      <div className="flex items-start justify-between">
         <div>
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-            <LayoutDashboard className="w-3 h-3" />
-            <span>Dashboard</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-foreground font-medium">POS/Bill</span>
-          </div>
           <h1 className="text-2xl font-bold tracking-tight">POS/Bill</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {totalBills} bill{totalBills !== 1 ? 's' : ''} recorded
           </p>
         </div>
+        {/* Desktop button — hidden on mobile (FAB used instead) */}
         <Button
           onClick={() => setView('new-bill')}
-          className="gap-2 shrink-0 self-start sm:self-auto"
+          className="hidden sm:flex gap-2 shrink-0"
         >
           <Plus className="w-4 h-4" />
           New Bill
         </Button>
       </div>
 
-      {/* ── KPI cards ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* ── KPI cards: 1-col on mobile, 2-col on tablet, 4-col on desktop ── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
         {kpiCards.map(({ key, label, icon: Icon, color, bg }) => (
           <Card key={key} className="rounded-2xl border shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
-                  <Icon className={`w-5 h-5 ${color}`} />
+            <CardContent className="p-3.5 sm:p-5">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${color}`} />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider truncate">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground font-medium uppercase tracking-wider leading-tight">
                     {label}
                   </p>
-                  <p className="text-xl font-bold tabular-nums mt-0.5">
+                  <p className="text-base sm:text-xl font-bold tabular-nums mt-0.5 truncate">
                     {kpiValues[key]}
                   </p>
                 </div>
@@ -185,6 +162,16 @@ export function PosPageClient({
           </Card>
         ))}
       </div>
+
+      {/* ── Mobile FAB: New Bill (fixed, above bottom nav) ────────────── */}
+      <Button
+        onClick={() => setView('new-bill')}
+        size="icon"
+        className="sm:hidden fixed bottom-[72px] right-4 z-50 h-12 w-12 rounded-full shadow-xl"
+        aria-label="New Bill"
+      >
+        <Plus className="w-5 h-5" />
+      </Button>
 
       {/* ── Bills table ───────────────────────────────────────────────────── */}
       <BillsTable bills={bills} />

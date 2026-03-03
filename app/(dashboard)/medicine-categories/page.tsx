@@ -36,13 +36,6 @@ export default async function MedicineCategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Medicine Categories"
-        description="Classify medicines into categories for better organisation"
-      >
-        <CategoryFormDialog />
-      </PageHeader>
-
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map(stat => (
@@ -62,8 +55,17 @@ export default async function MedicineCategoriesPage() {
         ))}
       </div>
 
-      {/* Data table */}
-      <CategoriesDataTable columns={categoryColumns} data={categories} />
+      {/* Header + data table in white card */}
+      <div className="bg-white dark:bg-card rounded-2xl border shadow-sm p-5 sm:p-6 space-y-5">
+        <PageHeader
+          title="Medicine Categories"
+          description="Classify medicines into categories for better organisation"
+        >
+          <CategoryFormDialog />
+        </PageHeader>
+
+        <CategoriesDataTable columns={categoryColumns} data={categories} />
+      </div>
     </div>
   )
 }

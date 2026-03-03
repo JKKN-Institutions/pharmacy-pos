@@ -12,7 +12,7 @@ interface KpiCardsProps {
 
 export function KpiCards({ totalIncome, totalExpenses, totalSalary, totalPurchase, todaySales }: KpiCardsProps) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 lg:gap-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-3 lg:grid-cols-4 lg:gap-4">
       <StatsCard
         title="Income"
         value={formatINR(totalIncome)}

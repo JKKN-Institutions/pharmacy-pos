@@ -226,7 +226,9 @@
       "Bash(cd D:/Projects/MyJKKN && bun test __tests__/lib/api-keys/audit-logger.test.ts 2>&1)",
       "Bash(cd D:/Projects/MyJKKN && bun test __tests__/lib/api-keys/ 2>&1)",
       "Bash(cd /d/Projects/MyJKKN && bun test __tests__/lib/api-keys/ 2>&1)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "Bash(rm:*)",
+      "mcp__supabase__deploy_edge_function"
     ],
     "deny": [],
     "ask": []

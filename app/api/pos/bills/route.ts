@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
       return {
         bill_id:        bill.id,
         medicine_id:    item.medicine_id,
+        medicine_name:  item.medicine_name ?? null,
         stock_batch_id: item.stock_batch_id,
         batch_no:       item.batch_no,
         expiry_date:    item.expiry_date,

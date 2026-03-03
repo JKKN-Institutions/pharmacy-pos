@@ -8,16 +8,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { CheckCircle2, ScanSearch } from 'lucide-react'
+import { CheckCircle2, ScanSearch, AlertTriangle } from 'lucide-react'
 import type { ParsedMedicineRow } from '@/lib/utils/parse-medicines-excel'
 
 export interface RowValidation {
   row: ParsedMedicineRow
-  status: 'valid' | 'duplicate' | 'error'
+  // 'warning' = row WILL import, but something minor will be adjusted (e.g. unit cleared)
+  status: 'valid' | 'warning' | 'duplicate' | 'error'
   reason?: string
 }
 
-type FilterTab = 'all' | 'valid' | 'errors' | 'duplicates'
+type FilterTab = 'all' | 'valid' | 'warnings' | 'errors' | 'duplicates'
 
 interface ValidateStepProps {
   allRows:           RowValidation[]
@@ -33,17 +34,23 @@ export function ValidateStep({
   const [activeTab, setActiveTab] = useState<FilterTab>('all')
 
   const validRows     = allRows.filter((r) => r.status === 'valid')
+  const warningRows   = allRows.filter((r) => r.status === 'warning')
   const errorRows     = allRows.filter((r) => r.status === 'error')
   const duplicateRows = allRows.filter((r) => r.status === 'duplicate')
 
+  // Both 'valid' and 'warning' rows proceed to import
+  const importableCount = validRows.length + warningRows.length
+
   const displayRows = activeTab === 'all'        ? allRows
                     : activeTab === 'valid'       ? validRows
+                    : activeTab === 'warnings'    ? warningRows
                     : activeTab === 'errors'      ? errorRows
                     : duplicateRows
 
   const tabs: { key: FilterTab; label: string; count: number }[] = [
     { key: 'all',        label: 'All',        count: allRows.length       },
     { key: 'valid',      label: 'Valid',       count: validRows.length     },
+    { key: 'warnings',   label: 'Warnings',    count: warningRows.length   },
     { key: 'errors',     label: 'Errors',      count: errorRows.length     },
     { key: 'duplicates', label: 'Duplicates',  count: duplicateRows.length },
   ]
@@ -52,6 +59,11 @@ export function ValidateStep({
     if (rv.status === 'valid') return (
       <Badge variant="outline" className="text-xs border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 gap-1">
         <CheckCircle2 className="h-3 w-3" /> Valid
+      </Badge>
+    )
+    if (rv.status === 'warning') return (
+      <Badge variant="outline" className="text-xs border-orange-300 bg-orange-50 text-orange-700 dark:border-orange-700 dark:bg-orange-950/40 dark:text-orange-400 gap-1">
+        <AlertTriangle className="h-3 w-3" /> Warning
       </Badge>
     )
     if (rv.status === 'error') return (
@@ -71,7 +83,7 @@ export function ValidateStep({
 
       {/* Summary cards */}
       <div className="px-6 py-4 flex-shrink-0">
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
           <div className="rounded-lg border p-3 text-center">
             <p className="text-2xl font-bold tabular-nums">{allRows.length.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-0.5">Total Rows</p>
@@ -81,6 +93,14 @@ export function ValidateStep({
               {validRows.length.toLocaleString()}
             </p>
             <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">✓ Valid</p>
+          </div>
+          <div className={`rounded-lg border p-3 text-center ${warningRows.length > 0 ? 'border-orange-200 bg-orange-50 dark:bg-orange-950/40 dark:border-orange-800' : 'border-border'}`}>
+            <p className={`text-2xl font-bold tabular-nums ${warningRows.length > 0 ? 'text-orange-700 dark:text-orange-400' : 'text-muted-foreground'}`}>
+              {warningRows.length.toLocaleString()}
+            </p>
+            <p className={`text-xs mt-0.5 ${warningRows.length > 0 ? 'text-orange-600 dark:text-orange-500' : 'text-muted-foreground'}`}>
+              ▲ Warnings
+            </p>
           </div>
           <div className={`rounded-lg border p-3 text-center ${errorRows.length > 0 ? 'border-red-200 bg-red-50 dark:bg-red-950/40 dark:border-red-800' : 'border-border'}`}>
             <p className={`text-2xl font-bold tabular-nums ${errorRows.length > 0 ? 'text-red-700 dark:text-red-400' : 'text-muted-foreground'}`}>
@@ -96,8 +116,8 @@ export function ValidateStep({
           </div>
         </div>
 
-        {/* All-clear alert */}
-        {errorRows.length === 0 && duplicateRows.length === 0 && (
+        {/* Alerts */}
+        {errorRows.length === 0 && duplicateRows.length === 0 && warningRows.length === 0 && (
           <Alert className="py-2 border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             <AlertDescription className="text-xs text-emerald-700 dark:text-emerald-300">
@@ -105,9 +125,17 @@ export function ValidateStep({
             </AlertDescription>
           </Alert>
         )}
+        {warningRows.length > 0 && errorRows.length === 0 && (
+          <Alert className="py-2 border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-xs text-orange-700 dark:text-orange-300">
+              {warningRows.length} row{warningRows.length > 1 ? 's have' : ' has'} minor issues (e.g. unrecognised unit will be imported as blank). These rows <strong>will still import</strong>.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Filter tabs */}
-        <div className="flex gap-1 mt-3">
+        <div className="flex gap-1 mt-3 flex-wrap">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -138,6 +166,7 @@ export function ValidateStep({
               <TableHead className="text-xs pl-6 w-12">Row</TableHead>
               <TableHead className="text-xs min-w-[200px]">Medicine</TableHead>
               <TableHead className="text-xs">Unit</TableHead>
+              <TableHead className="text-xs text-right">Live Stock</TableHead>
               <TableHead className="text-xs">Tax%</TableHead>
               <TableHead className="text-xs">Status</TableHead>
               <TableHead className="text-xs pr-6">Issue</TableHead>
@@ -149,6 +178,7 @@ export function ValidateStep({
                 key={rv.row.raw_row}
                 className={`border-b border-border/40
                   ${rv.status === 'error'     ? 'bg-red-50/30 dark:bg-red-950/10'     : ''}
+                  ${rv.status === 'warning'   ? 'bg-orange-50/30 dark:bg-orange-950/10' : ''}
                   ${rv.status === 'duplicate' ? 'bg-amber-50/30 dark:bg-amber-950/10' : ''}`}
               >
                 <TableCell className="text-xs text-muted-foreground pl-6 tabular-nums">
@@ -163,6 +193,9 @@ export function ValidateStep({
                   )}
                 </TableCell>
                 <TableCell className="text-xs">{rv.row.unit ?? '—'}</TableCell>
+                <TableCell className="text-xs tabular-nums text-right">
+                  {rv.row.live_stock != null ? rv.row.live_stock.toLocaleString() : '—'}
+                </TableCell>
                 <TableCell className="text-xs tabular-nums">
                   {rv.row.tax_percent != null ? `${rv.row.tax_percent}%` : '—'}
                 </TableCell>
@@ -179,7 +212,7 @@ export function ValidateStep({
       {/* Footer */}
       <div className="px-6 py-4 flex items-center justify-between flex-shrink-0">
         <Button variant="outline" onClick={onBack}>Back</Button>
-        <Button disabled={validRows.length === 0 || !!isChecking} onClick={onCheckDuplicates}>
+        <Button disabled={importableCount === 0 || !!isChecking} onClick={onCheckDuplicates}>
           <ScanSearch className="w-4 h-4 mr-2" />
           Check for Conflicts →
         </Button>

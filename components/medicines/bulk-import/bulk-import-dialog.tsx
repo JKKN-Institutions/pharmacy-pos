@@ -20,9 +20,7 @@ import {
   type ConflictResolutionsMap,
 } from '@/lib/utils/duplicate-detection'
 import {
-  VALID_UNITS,
   VALID_GST_SLABS,
-  type ValidUnit,
   type GstSlab,
 } from '@/lib/validators/medicine-schema'
 import {
@@ -119,8 +117,9 @@ export function BulkImportDialog({ open, onOpenChange }: BulkImportDialogProps) 
   const [conflictResolutions, setConflictResolutions] = useState<ConflictResolutionsMap>({})
 
   // ── Derived slices ──────────────────────────────────────────────────────────
-  const validRows    = allRows.filter((r) => r.status === 'valid').map((r) => r.row)
-  const skippedCount = allRows.filter((r) => r.status !== 'valid').length
+  // 'warning' rows still import (unit will be cleared server-side if unrecognised)
+  const validRows    = allRows.filter((r) => r.status === 'valid' || r.status === 'warning').map((r) => r.row)
+  const skippedCount = allRows.filter((r) => r.status === 'error' || r.status === 'duplicate').length
   const isImporting  = importProgress.phase !== 'idle'
 
   // ── Dynamic step list ───────────────────────────────────────────────────────
@@ -173,9 +172,6 @@ export function BulkImportDialog({ open, onOpenChange }: BulkImportDialogProps) 
     const validated: RowValidation[] = parsedRows.map((row) => {
       if (!row.name || row.name.length < 2)
         return { row, status: 'error', reason: 'Name too short or missing' }
-
-      if (row.unit && !VALID_UNITS.includes(row.unit as ValidUnit))
-        return { row, status: 'error', reason: `Unit "${row.unit}" is not valid. Use: ${VALID_UNITS.join(', ')}` }
 
       if (row.tax_percent !== null && !VALID_GST_SLABS.includes(row.tax_percent as GstSlab))
         return { row, status: 'error', reason: `Tax ${row.tax_percent}% is not a valid GST slab (0, 5, 12, 18, 28)` }

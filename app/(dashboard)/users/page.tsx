@@ -1,12 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DataTable } from '@/components/ui/data-table'
 import { userColumns } from './columns'
 import { PageHeader } from '@/components/ui/page-header'
 import { UserFormDialog } from '@/components/users/user-form-dialog'
+import { AdvancedDataTable } from '@/components/ui/advanced-data-table'
 
-export default async function UsersPage() {
+const SORTABLE_DB_COLUMNS = ['name', 'role', 'created_at']
+
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    search?: string
+    page?: string
+    pageSize?: string
+    sort?: string
+    order?: string
+  }>
+}) {
+  const params = await searchParams
   const supabase = await createClient()
+
+  // ── Auth guard ─────────────────────────────────────────────────────────────
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -18,22 +33,52 @@ export default async function UsersPage() {
 
   if (profile?.role !== 'admin') redirect('/dashboard')
 
-  const { data: users } = await supabase
+  // ── Pagination ─────────────────────────────────────────────────────────────
+  const pageSize = Math.min(50, Math.max(10, parseInt(params.pageSize ?? '15')))
+  const page = Math.max(1, parseInt(params.page ?? '1'))
+  const rangeFrom = (page - 1) * pageSize
+  const rangeTo = rangeFrom + pageSize - 1
+
+  // ── Sorting ────────────────────────────────────────────────────────────────
+  const sortCol = SORTABLE_DB_COLUMNS.includes(params.sort ?? '') ? params.sort! : 'created_at'
+  const ascending = params.order === 'asc'
+
+  // ── Query ──────────────────────────────────────────────────────────────────
+  let query = supabase
     .from('user_profiles')
-    .select('*')
-    .order('created_at', { ascending: false })
+    .select('*', { count: 'exact' })
+    .order(sortCol, { ascending })
+    .range(rangeFrom, rangeTo)
+
+  if (params.search) query = query.ilike('name', `%${params.search}%`)
+
+  const { data: users, count } = await query
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Users" description="Manage staff accounts and roles">
-        <UserFormDialog />
-      </PageHeader>
-      <DataTable
-        columns={userColumns}
-        data={users ?? []}
-        searchKey="name"
-        searchPlaceholder="Search users..."
-      />
+      <div className="bg-white dark:bg-card rounded-2xl border shadow-sm p-5 sm:p-6 space-y-5">
+        <PageHeader title="Users" description="Manage staff accounts and roles">
+          <UserFormDialog />
+        </PageHeader>
+
+        <AdvancedDataTable
+          columns={userColumns}
+          data={users ?? []}
+          totalCount={count ?? 0}
+          initialPage={page}
+          initialPageSize={pageSize}
+          initialSearch={params.search ?? ''}
+          initialSort={sortCol}
+          initialOrder={ascending ? 'asc' : 'desc'}
+          searchPlaceholder="Search users…"
+          emptyMessage="No users found"
+          recordLabel="user"
+          columnLabels={{
+            name: 'Name',
+            role: 'Role',
+          }}
+        />
+      </div>
     </div>
   )
 }

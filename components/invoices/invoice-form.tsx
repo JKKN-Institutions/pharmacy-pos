@@ -216,7 +216,7 @@ export function InvoiceForm({ customers }: { customers: Pick<Customer, 'id' | 'f
           </div>
         </div>
 
-        <Button type="submit" disabled={form.formState.isSubmitting}>
+        <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
           {form.formState.isSubmitting ? 'Creating...' : 'Create Invoice'}
         </Button>
       </form>

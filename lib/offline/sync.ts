@@ -10,7 +10,8 @@ export async function syncMedicines(): Promise<boolean> {
     await db.transaction('rw', db.medicines, async () => {
       await db.medicines.clear()
       await db.medicines.bulkAdd(
-        medicines.map((m: any) => ({ ...m, batches: m.stock_batches ?? [], last_synced_at: synced_at }))
+        // New sync API already returns `batches` directly (pre-grouped, numeric-coerced)
+        medicines.map((m: any) => ({ ...m, last_synced_at: synced_at }))
       )
     })
     return true

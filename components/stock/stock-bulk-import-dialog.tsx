@@ -266,8 +266,8 @@ export function StockBulkImportDialog({ open, onOpenChange }: Props) {
   }
 
   function downloadTemplate() {
-    const headers = ['Medicine', 'Batch', 'Expiry', 'Purchase Price', 'Sale Price', 'MRP', 'Qty']
-    const example = ['PARACETAMOL 500MG TAB', 'BN240001', '12/2026', '42.50', '68.00', '75.00', '100']
+    const headers = ['Name', 'Batch', 'Expiry', 'Purchase Price', 'Sale Price', 'Qty', 'Sold', 'Available']
+    const example = ['PARACETAMOL 500MG TAB', 'BN240001', '12/2026', '42.50', '68.00', '100', '25', '75']
     const csv = [headers.join(','), example.join(',')].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url  = URL.createObjectURL(blob)
@@ -336,13 +336,14 @@ export function StockBulkImportDialog({ open, onOpenChange }: Props) {
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {[
-                  { label: 'Medicine',       required: true  },
+                  { label: 'Name',           required: true  },
                   { label: 'Batch',          required: true  },
                   { label: 'Expiry',         required: true  },
                   { label: 'Purchase Price', required: true  },
                   { label: 'Sale Price',     required: true  },
-                  { label: 'MRP',            required: false },
                   { label: 'Qty',            required: true  },
+                  { label: 'Sold',           required: false },
+                  { label: 'Available',      required: false },
                 ].map(({ label, required }) => (
                   <span
                     key={label}
@@ -358,7 +359,7 @@ export function StockBulkImportDialog({ open, onOpenChange }: Props) {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground">
-                * required &nbsp;·&nbsp; Expiry accepts DD/MM/YYYY, MM/YYYY, or YYYY-MM-DD
+                * required &nbsp;·&nbsp; Expiry: DD/MM/YYYY, MM/YYYY, or YYYY-MM-DD &nbsp;·&nbsp; Sold &amp; Available default to 0 / Qty if omitted
               </p>
             </div>
 
@@ -495,19 +496,21 @@ export function StockBulkImportDialog({ open, onOpenChange }: Props) {
                     <TableHeader className="sticky top-0 z-10">
                       <TableRow className="bg-muted/80 hover:bg-muted/80 backdrop-blur">
                         <TableHead className="text-xs pl-6 w-10">#</TableHead>
-                        <TableHead className="text-xs">Medicine</TableHead>
+                        <TableHead className="text-xs">Name</TableHead>
                         <TableHead className="text-xs">Batch</TableHead>
                         <TableHead className="text-xs">Expiry</TableHead>
                         <TableHead className="text-xs text-right">Purchase</TableHead>
                         <TableHead className="text-xs text-right">Sale</TableHead>
-                        <TableHead className="text-xs text-right pr-6">Qty</TableHead>
+                        <TableHead className="text-xs text-right">Qty</TableHead>
+                        <TableHead className="text-xs text-right">Sold</TableHead>
+                        <TableHead className="text-xs text-right pr-6">Available</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {validRows.slice(0, 50).map((row) => (
                         <TableRow key={row.raw_row} className="border-b border-border/40">
                           <TableCell className="text-xs text-muted-foreground pl-6">{row.raw_row}</TableCell>
-                          <TableCell className="text-xs font-medium max-w-[200px]">
+                          <TableCell className="text-xs font-medium max-w-[160px]">
                             <div className="truncate">{row.medicine_name}</div>
                           </TableCell>
                           <TableCell className="text-xs font-mono">{row.batch_number}</TableCell>
@@ -520,8 +523,14 @@ export function StockBulkImportDialog({ open, onOpenChange }: Props) {
                           <TableCell className="text-xs text-right tabular-nums">
                             {formatINR(row.selling_price)}
                           </TableCell>
-                          <TableCell className="text-xs text-right font-semibold tabular-nums pr-6">
+                          <TableCell className="text-xs text-right tabular-nums">
                             {row.qty}
+                          </TableCell>
+                          <TableCell className="text-xs text-right tabular-nums text-muted-foreground">
+                            {row.sold}
+                          </TableCell>
+                          <TableCell className="text-xs text-right font-semibold tabular-nums pr-6">
+                            {row.available}
                           </TableCell>
                         </TableRow>
                       ))}

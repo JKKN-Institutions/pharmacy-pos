@@ -134,8 +134,8 @@ export async function prepareStockBatchImportAction(
       purchase_price: row.purchase_price,
       sale_price: row.selling_price,
       initial_qty: row.qty,
-      sold_qty: 0,
-      available_qty: row.qty,
+      sold_qty: row.sold,
+      available_qty: row.available,
       status: 'active',
     })
   }

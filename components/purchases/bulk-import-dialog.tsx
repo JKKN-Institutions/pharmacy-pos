@@ -34,6 +34,8 @@ import {
   XCircle,
   Filter,
 } from 'lucide-react'
+
+const WarnIcon = AlertTriangle
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { formatINR } from '@/lib/utils/currency'
@@ -79,6 +81,7 @@ export function BulkImportPurchasesDialog({
 
   const validRows = rows.filter((r) => r.isValid)
   const invalidRows = rows.filter((r) => !r.isValid)
+  const correctedRows = rows.filter((r) => r.isValid && r.warnings.length > 0)
   const previewRows = showInvalidOnly ? invalidRows : rows
 
   function handleClose() {
@@ -287,6 +290,14 @@ export function BulkImportPurchasesDialog({
                     {validRows.length.toLocaleString()} valid
                   </span>
                 </div>
+                {correctedRows.length > 0 && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800">
+                    <WarnIcon className="w-3.5 h-3.5 text-amber-500" />
+                    <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                      {correctedRows.length.toLocaleString()} total corrected
+                    </span>
+                  </div>
+                )}
                 {invalidRows.length > 0 && (
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800">
                     <XCircle className="w-3.5 h-3.5 text-red-500" />
@@ -315,7 +326,19 @@ export function BulkImportPurchasesDialog({
                 )}
               </div>
 
-              {/* Validation notice */}
+              {/* Auto-correction notice */}
+              {correctedRows.length > 0 && (
+                <div className="px-6 py-2.5 bg-amber-50/60 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900 flex-shrink-0">
+                  <p className="text-xs text-amber-800 dark:text-amber-300">
+                    <strong>{correctedRows.length} row(s) had incorrect totals</strong> — the Amount
+                    column did not match <code className="font-mono">subtotal + tax − discount</code>.
+                    Totals have been <strong>auto-corrected</strong> using the right formula.
+                    Hover the <WarnIcon className="inline w-3 h-3" /> badge to see the original vs corrected value.
+                  </p>
+                </div>
+              )}
+
+              {/* Validation error notice */}
               {invalidRows.length > 0 && (
                 <div className="px-6 py-2.5 bg-red-50/60 dark:bg-red-950/20 border-b border-red-100 dark:border-red-900 flex-shrink-0">
                   <p className="text-xs text-red-700 dark:text-red-400">
@@ -344,29 +367,26 @@ export function BulkImportPurchasesDialog({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {previewRows.slice(0, 100).map((row) => (
+                    {previewRows.slice(0, 100).map((row) => {
+                      const hasCorrectedTotal = !!row.original_total
+                      return (
                       <TableRow
                         key={row.raw_row}
-                        className={`border-b border-border/40 ${!row.isValid
-                          ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30'
-                          : ''
-                          }`}
+                        className={`border-b border-border/40 ${
+                          !row.isValid
+                            ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30'
+                            : hasCorrectedTotal
+                            ? 'bg-amber-50/40 dark:bg-amber-950/10'
+                            : ''
+                        }`}
                       >
                         <TableCell className="text-xs text-muted-foreground pl-6">
                           {row.raw_row}
                         </TableCell>
 
-                        {/* Status cell with tooltip for errors */}
+                        {/* Status cell — error, corrected, or valid */}
                         <TableCell className="text-xs">
-                          {row.isValid ? (
-                            <Badge
-                              variant="outline"
-                              className="text-xs border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 gap-1"
-                            >
-                              <CheckCircle2 className="w-3 h-3" />
-                              Valid
-                            </Badge>
-                          ) : (
+                          {!row.isValid ? (
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Badge
@@ -377,28 +397,42 @@ export function BulkImportPurchasesDialog({
                                   Error
                                 </Badge>
                               </TooltipTrigger>
-                              <TooltipContent
-                                side="right"
-                                className="max-w-xs text-xs"
-                              >
+                              <TooltipContent side="right" className="max-w-xs text-xs">
                                 <ul className="space-y-0.5 list-disc list-inside">
-                                  {row.errors.map((e, i) => (
-                                    <li key={i}>{e}</li>
-                                  ))}
+                                  {row.errors.map((e, i) => <li key={i}>{e}</li>)}
                                 </ul>
                               </TooltipContent>
                             </Tooltip>
+                          ) : hasCorrectedTotal ? (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-400 gap-1 cursor-help"
+                                >
+                                  <WarnIcon className="w-3 h-3" />
+                                  Corrected
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent side="right" className="max-w-sm text-xs space-y-1">
+                                {row.warnings.map((w, i) => <p key={i}>{w}</p>)}
+                              </TooltipContent>
+                            </Tooltip>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-xs border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 gap-1"
+                            >
+                              <CheckCircle2 className="w-3 h-3" />
+                              Valid
+                            </Badge>
                           )}
                         </TableCell>
 
                         <TableCell className="text-xs font-medium max-w-[180px]">
-                          <div
-                            className={`truncate ${!row.isValid ? 'text-red-700 dark:text-red-400' : ''}`}
-                          >
+                          <div className={`truncate ${!row.isValid ? 'text-red-700 dark:text-red-400' : ''}`}>
                             {row.supplier_name || (
-                              <span className="text-muted-foreground italic">
-                                (missing)
-                              </span>
+                              <span className="text-muted-foreground italic">(missing)</span>
                             )}
                           </div>
                         </TableCell>
@@ -420,14 +454,21 @@ export function BulkImportPurchasesDialog({
                         <TableCell className="text-xs text-right text-muted-foreground">
                           {row.discount > 0 ? formatINR(row.discount) : '—'}
                         </TableCell>
-                        <TableCell
-                          className={`text-xs text-right font-semibold pr-6 ${row.total <= 0 ? 'text-red-500' : ''
-                            }`}
-                        >
-                          {row.total > 0 ? formatINR(row.total) : '₹0.00'}
+
+                        {/* Total — show strikethrough original + corrected value */}
+                        <TableCell className={`text-xs text-right pr-6 ${row.total <= 0 ? 'text-red-500' : ''}`}>
+                          {hasCorrectedTotal && (
+                            <div className="text-xs text-muted-foreground/60 line-through leading-tight">
+                              {formatINR(row.original_total!)}
+                            </div>
+                          )}
+                          <div className={`font-semibold leading-tight ${hasCorrectedTotal ? 'text-amber-700 dark:text-amber-400' : ''}`}>
+                            {row.total > 0 ? formatINR(row.total) : '₹0.00'}
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      )
+                    })}
                   </TableBody>
                 </Table>
                 {previewRows.length > 100 && (

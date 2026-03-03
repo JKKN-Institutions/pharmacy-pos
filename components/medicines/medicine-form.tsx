@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { createMedicineAction, updateMedicineAction } from '@/app/(dashboard)/medicines/actions'
 import type { Medicine, MedicineCategory, TaxRate } from '@/lib/types/database'
+import { PackageCheck } from 'lucide-react'
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   company: z.string().optional(),
@@ -45,8 +46,9 @@ interface MedicineFormProps {
   medicine?: Medicine
   categories: Pick<MedicineCategory, 'id' | 'name'>[]
   taxRates: Pick<TaxRate, 'id' | 'name' | 'rate'>[]
+  liveStock?: number
 }
-export function MedicineForm({ medicine, categories, taxRates }: MedicineFormProps) {
+export function MedicineForm({ medicine, categories, taxRates, liveStock }: MedicineFormProps) {
   const isEdit = !!medicine
 
   const form = useForm<FormValues>({
@@ -157,6 +159,48 @@ export function MedicineForm({ medicine, categories, taxRates }: MedicineFormPro
                   <FormMessage />
                 </FormItem>
               )} />
+              {/* Live Stock — read-only, shown only in edit mode */}
+              {isEdit && liveStock !== undefined && (
+                <div className="sm:col-span-2">
+                  <div className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+                    liveStock <= (medicine?.min_level ?? 0)
+                      ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30'
+                      : liveStock <= (medicine?.reorder_level ?? 0)
+                        ? 'border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30'
+                        : 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
+                  }`}>
+                    <PackageCheck className={`h-5 w-5 shrink-0 ${
+                      liveStock <= (medicine?.min_level ?? 0)
+                        ? 'text-red-600 dark:text-red-400'
+                        : liveStock <= (medicine?.reorder_level ?? 0)
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-emerald-600 dark:text-emerald-400'
+                    }`} />
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Live Stock</p>
+                      <p className={`text-2xl font-bold tabular-nums leading-tight ${
+                        liveStock <= (medicine?.min_level ?? 0)
+                          ? 'text-red-700 dark:text-red-300'
+                          : liveStock <= (medicine?.reorder_level ?? 0)
+                            ? 'text-amber-700 dark:text-amber-300'
+                            : 'text-emerald-700 dark:text-emerald-300'
+                      }`}>
+                        {liveStock.toLocaleString()}
+                        <span className="ml-1.5 text-sm font-normal text-muted-foreground">
+                          {medicine?.unit ?? 'units'}
+                        </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {liveStock <= (medicine?.min_level ?? 0)
+                          ? 'Critically low — below minimum level'
+                          : liveStock <= (medicine?.reorder_level ?? 0)
+                            ? 'Low — consider reordering'
+                            : 'Stock is healthy'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               <FormField control={form.control} name="min_level" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Min Level</FormLabel>
@@ -214,8 +258,8 @@ export function MedicineForm({ medicine, categories, taxRates }: MedicineFormPro
               )} />
             </div>
 
-            <div className="flex gap-3">
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button type="submit" disabled={form.formState.isSubmitting} className="w-full sm:w-auto">
                 {form.formState.isSubmitting ? 'Saving...' : isEdit ? 'Update Medicine' : 'Add Medicine'}
               </Button>
             </div>

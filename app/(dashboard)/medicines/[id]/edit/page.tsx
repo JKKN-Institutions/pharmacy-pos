@@ -14,13 +14,21 @@ export default async function EditMedicinePage({
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: medicine }, { data: categories }, { data: taxRates }] = await Promise.all([
-    supabase.from('medicines').select('*').eq('id', id).single(),
-    supabase.from('medicine_categories').select('id, name').order('name'),
-    supabase.from('tax_rates').select('id, name, rate').eq('is_active', true).order('rate'),
-  ])
+  const [{ data: medicine }, { data: categories }, { data: taxRates }, { data: batchData }] =
+    await Promise.all([
+      supabase.from('medicines').select('*').eq('id', id).single(),
+      supabase.from('medicine_categories').select('id, name').order('name'),
+      supabase.from('tax_rates').select('id, name, rate').eq('is_active', true).order('rate'),
+      supabase
+        .from('stock_batches')
+        .select('available_qty')
+        .eq('medicine_id', id)
+        .eq('status', 'active'),
+    ])
 
   if (!medicine) notFound()
+
+  const liveStock = (batchData ?? []).reduce((sum, b) => sum + (b.available_qty ?? 0), 0)
 
   return (
     <div className="space-y-6">
@@ -29,7 +37,12 @@ export default async function EditMedicinePage({
           <Link href="/medicines"><ChevronLeft className="w-4 h-4 mr-1" />Back</Link>
         </Button>
       </PageHeader>
-      <MedicineForm medicine={medicine} categories={categories ?? []} taxRates={taxRates ?? []} />
+      <MedicineForm
+        medicine={medicine}
+        categories={categories ?? []}
+        taxRates={taxRates ?? []}
+        liveStock={liveStock}
+      />
     </div>
   )
 }

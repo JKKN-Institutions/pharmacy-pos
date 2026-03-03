@@ -221,6 +221,33 @@ export async function bulkImportPurchasesAction(rows: BulkPurchaseRow[]): Promis
   return { inserted, skipped, errors }
 }
 
+export async function bulkDeletePurchasesAction(
+  ids: string[],
+): Promise<{ deleted: number; error?: string }> {
+  if (!ids.length) return { deleted: 0 }
+
+  const supabase = await createClient()
+
+  // 1. Remove stock batches created by these purchases
+  const { error: stockError } = await supabase
+    .from('stock_batches')
+    .delete()
+    .in('purchase_id', ids)
+
+  if (stockError) return { deleted: 0, error: stockError.message }
+
+  // 2. Delete purchase line items
+  await supabase.from('purchase_items').delete().in('purchase_id', ids)
+
+  // 3. Delete purchase headers
+  const { error } = await supabase.from('purchases').delete().in('id', ids)
+  if (error) return { deleted: 0, error: error.message }
+
+  revalidatePath('/purchases')
+  revalidatePath('/stock')
+  return { deleted: ids.length }
+}
+
 export async function deletePurchaseAction(id: string) {
   const supabase = await createClient()
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,10 +12,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { format } from 'date-fns'
 import type { BillItem } from './pos-client'
 import { db } from '@/lib/offline/db'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+
+interface TaxRate {
+  id: string
+  name: string
+  rate: number
+}
 
 // ── Inline medicine combobox — renders dropdown via portal to escape overflow-x-auto clipping ──
 function MedicineCombobox({
@@ -162,8 +175,21 @@ interface BillLineItemsProps {
 
 export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: BillLineItemsProps) {
   const comboboxRef = useRef<HTMLInputElement | null>(null)
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([])
+  const [taxPickerItemId, setTaxPickerItemId] = useState<string | null>(null)
+
+  // Fetch active tax rates once on mount — silent fail (manual input still works)
+  useEffect(() => {
+    fetch('/api/pos/taxes')
+      .then((r) => r.json())
+      .then((d) => setTaxRates(d.taxRates ?? []))
+      .catch(() => {})
+  }, [])
 
   function handleMedicineSelect(medicine: any, batch: any) {
+    // Use Number() to coerce — PostgREST returns PostgreSQL `numeric` columns as
+    // strings (e.g. "10.00") to preserve precision, which would break .toFixed()
+    const salePrice = Number(batch.sale_price)
     const item: BillItem = {
       id: crypto.randomUUID(),
       medicine_id: medicine.id,
@@ -171,13 +197,13 @@ export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: B
       stock_batch_id: batch.id,
       batch_no: batch.batch_no,
       expiry_date: batch.expiry_date,
-      available_qty: batch.available_qty,
+      available_qty: Number(batch.available_qty),
       qty: 1,
-      sale_price: batch.sale_price,
+      sale_price: salePrice,
       discount_type: 'percent',
       discount_value: 0,
-      tax: medicine.tax_percent ?? 0,
-      price: batch.sale_price,
+      tax: Number(medicine.tax_percent ?? 0),
+      price: salePrice,
     }
     onAdd(item)
     // Re-focus combobox for fast consecutive entry
@@ -326,7 +352,7 @@ export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: B
                       size="sm"
                       variant="outline"
                       className="h-6 px-3 text-xs rounded-full border-amber-400 bg-amber-400 text-white hover:bg-amber-500 hover:border-amber-500 font-medium"
-                      onClick={() => document.getElementById(`bill-tax-${item.id}`)?.focus()}
+                      onClick={() => setTaxPickerItemId(item.id)}
                     >
                       Add Taxes
                     </Button>
@@ -426,6 +452,70 @@ export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: B
           Add Item
         </Button>
       </div>
+
+      {/* ── Tax Picker Dialog ──────────────────────────────────── */}
+      <Dialog
+        open={taxPickerItemId !== null}
+        onOpenChange={(open) => { if (!open) setTaxPickerItemId(null) }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Select Tax Rate</DialogTitle>
+          </DialogHeader>
+          {taxPickerItemId && (
+            <p className="text-xs text-muted-foreground -mt-1 mb-1">
+              {items.find((i) => i.id === taxPickerItemId)?.medicine_name}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2 pt-1">
+            {/* No Tax option */}
+            <button
+              type="button"
+              onClick={() => {
+                if (taxPickerItemId) onUpdate(taxPickerItemId, { tax: 0 })
+                setTaxPickerItemId(null)
+              }}
+              className={cn(
+                'flex flex-col items-center justify-center gap-0.5 rounded-lg border-2 p-3 text-sm font-medium transition-colors',
+                items.find((i) => i.id === taxPickerItemId)?.tax === 0
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-border hover:border-primary/50 hover:bg-muted/50'
+              )}
+            >
+              <span className="text-base font-bold">0%</span>
+              <span className="text-xs text-muted-foreground">No Tax</span>
+            </button>
+
+            {/* Active tax rates from Tax Rates module */}
+            {taxRates.map((tr) => (
+              <button
+                key={tr.id}
+                type="button"
+                onClick={() => {
+                  if (taxPickerItemId) onUpdate(taxPickerItemId, { tax: tr.rate })
+                  setTaxPickerItemId(null)
+                }}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-0.5 rounded-lg border-2 p-3 text-sm font-medium transition-colors',
+                  items.find((i) => i.id === taxPickerItemId)?.tax === tr.rate
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                )}
+              >
+                <span className="text-base font-bold">{tr.rate}%</span>
+                <span className="text-xs text-muted-foreground">{tr.name}</span>
+              </button>
+            ))}
+
+            {/* Fallback if no tax rates configured */}
+            {taxRates.length === 0 && (
+              <p className="col-span-2 text-xs text-muted-foreground text-center py-2">
+                No tax rates configured. Add them in Settings → Tax Rates.
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

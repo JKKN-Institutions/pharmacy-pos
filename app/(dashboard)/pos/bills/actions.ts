@@ -18,7 +18,7 @@ export async function getBillItemsAction(billId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('pos_bill_items')
-    .select('id, batch_no, qty, sale_price, price, medicines(name)')
+    .select('id, medicine_name, batch_no, qty, sale_price, price')
     .eq('bill_id', billId)
     .order('id')
   if (error) return { data: null, error: error.message }

@@ -15,10 +15,12 @@ export interface ParsedPurchaseRow {
   subtotal: number
   tax: number
   discount: number
-  total: number
+  total: number           // May be auto-corrected (subtotal + tax − discount)
+  original_total?: number // Original value from file when auto-correction happened
   purchase_date: string   // ISO format: YYYY-MM-DD (empty string if unparseable)
   raw_row: number         // Original sheet row index (for error messages)
-  errors: string[]        // Validation error messages — empty means the row is valid
+  errors: string[]        // Validation errors — empty means row is importable
+  warnings: string[]      // Non-blocking notices (e.g. auto-corrected total)
   isValid: boolean
 }
 
@@ -55,8 +57,8 @@ function parseDate(value: string | null | undefined): string {
   return ''
 }
 
-/** Run all validation rules against a parsed row. Returns an array of error messages. */
-function validateRow(row: Omit<ParsedPurchaseRow, 'errors' | 'isValid'>): string[] {
+/** Run validation rules. Returns error messages for blocking issues only. */
+function validateRow(row: Omit<ParsedPurchaseRow, 'errors' | 'warnings' | 'isValid'>): string[] {
   const errs: string[] = []
 
   if (!row.supplier_name || row.supplier_name.trim().length < 2) {
@@ -90,21 +92,6 @@ function validateRow(row: Omit<ParsedPurchaseRow, 'errors' | 'isValid'>): string
     errs.push('Discount cannot be negative')
   }
 
-  // Cross-check math: subtotal + tax - discount should ≈ total (allow ₹1 rounding)
-  if (
-    !isNaN(row.subtotal) &&
-    !isNaN(row.tax) &&
-    !isNaN(row.discount) &&
-    !isNaN(row.total)
-  ) {
-    const computed = row.subtotal + row.tax - row.discount
-    if (Math.abs(computed - row.total) > 1.5) {
-      errs.push(
-        `Total mismatch: ${row.subtotal.toFixed(2)} + ${row.tax.toFixed(2)} − ${row.discount.toFixed(2)} = ${computed.toFixed(2)}, but Amount = ${row.total.toFixed(2)}`,
-      )
-    }
-  }
-
   return errs
 }
 
@@ -113,6 +100,10 @@ function validateRow(row: Omit<ParsedPurchaseRow, 'errors' | 'isValid'>): string
  *
  * ALL rows (including invalid ones) are returned so the preview can highlight
  * problems. Only rows where `isValid === true` should be sent to the server action.
+ *
+ * When the "Amount" column in the file does NOT match (subtotal + tax − discount),
+ * the total is AUTO-CORRECTED to the formula value and a warning is added to the row.
+ * The row remains valid and will be imported with the corrected total.
  */
 export function parsePurchasesFile(
   buffer: ArrayBuffer,
@@ -211,28 +202,55 @@ export function parsePurchasesFile(
     const subtotal = parseCurrency(
       r['sub total'] ?? r['subtotal'] ?? r['sub_total'] ?? '',
     )
-    const tax = parseCurrency(r['tax'] ?? '')
+    const tax      = parseCurrency(r['tax'] ?? '')
     const discount = parseCurrency(r['discount'] ?? '')
-    const total = parseCurrency(
+    const rawTotal = parseCurrency(
       r['amount'] ?? r['total'] ?? r['grand total'] ?? '',
     )
     const purchase_date = parseDate(
       r['purchase date'] ?? r['purchasedate'] ?? r['date'] ?? '',
     )
 
-    const partial: Omit<ParsedPurchaseRow, 'errors' | 'isValid'> = {
+    // ── Auto-correct total using the standard formula ─────────────────────────
+    // Correct formula: total = subtotal + tax − discount
+    // If the file's Amount column does not match (within ₹1.50 rounding tolerance),
+    // auto-correct it and record a warning so the user knows what changed.
+    const TOLERANCE = 1.5
+    let total = isNaN(rawTotal) ? 0 : rawTotal
+    let original_total: number | undefined
+    const warnings: string[] = []
+
+    if (
+      !isNaN(subtotal) && subtotal >= 0 &&
+      !isNaN(tax)      && tax >= 0 &&
+      !isNaN(discount) && discount >= 0 &&
+      !isNaN(rawTotal) && rawTotal > 0
+    ) {
+      const corrected = Math.max(0, subtotal + tax - discount)
+      if (Math.abs(rawTotal - corrected) > TOLERANCE) {
+        original_total = rawTotal
+        total = corrected
+        warnings.push(
+          `Amount corrected: file had ₹${rawTotal.toFixed(2)}, ` +
+          `recalculated as ₹${subtotal.toFixed(2)} + ₹${tax.toFixed(2)} − ₹${discount.toFixed(2)} = ₹${corrected.toFixed(2)}`,
+        )
+      }
+    }
+
+    const partial: Omit<ParsedPurchaseRow, 'errors' | 'warnings' | 'isValid'> = {
       supplier_name,
-      subtotal: isNaN(subtotal) ? 0 : subtotal,
-      tax: isNaN(tax) ? 0 : tax,
-      discount: isNaN(discount) ? 0 : discount,
-      total: isNaN(total) ? 0 : total,
+      subtotal:  isNaN(subtotal)  ? 0 : subtotal,
+      tax:       isNaN(tax)       ? 0 : tax,
+      discount:  isNaN(discount)  ? 0 : discount,
+      total,
+      original_total,
       purchase_date,
       raw_row: i + 1,
     }
 
     const errors = validateRow(partial)
 
-    result.push({ ...partial, errors, isValid: errors.length === 0 })
+    result.push({ ...partial, errors, warnings, isValid: errors.length === 0 })
   }
 
   return result

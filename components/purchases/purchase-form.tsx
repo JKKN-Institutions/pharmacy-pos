@@ -614,7 +614,7 @@ export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
           <Button
             type="submit"
             disabled={form.formState.isSubmitting}
-            className="px-12 bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full sm:w-auto px-12 bg-green-600 hover:bg-green-700 text-white"
           >
             {form.formState.isSubmitting ? 'Saving...' : 'Save'}
           </Button>

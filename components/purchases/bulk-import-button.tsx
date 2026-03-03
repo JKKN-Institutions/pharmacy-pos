@@ -10,8 +10,8 @@ export function BulkImportPurchasesButton() {
 
   return (
     <>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Upload className="w-4 h-4 mr-2" />
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)} className="gap-1.5">
+        <Upload className="w-4 h-4" />
         Import
       </Button>
       <BulkImportPurchasesDialog open={open} onOpenChange={setOpen} />

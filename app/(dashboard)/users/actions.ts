@@ -10,6 +10,7 @@ const userSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   role: z.enum(['admin', 'manager', 'pharmacist', 'cashier']),
+  branch_id: z.string().min(1, 'Branch is required'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
@@ -19,6 +20,7 @@ export async function createUserAction(formData: FormData) {
     email: formData.get('email') as string,
     phone: formData.get('phone') as string || undefined,
     role: formData.get('role') as string,
+    branch_id: formData.get('branch_id') as string,
     password: formData.get('password') as string,
   }
 
@@ -29,12 +31,6 @@ export async function createUserAction(formData: FormData) {
 
   const supabase = await createClient()
   const adminClient = createAdminClient()
-
-  const { data: branchData } = await supabase
-    .from('branches')
-    .select('id')
-    .limit(1)
-    .single()
 
   const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
     email: parsed.data.email,
@@ -50,7 +46,7 @@ export async function createUserAction(formData: FormData) {
     email: parsed.data.email,
     phone: parsed.data.phone ?? null,
     role: parsed.data.role,
-    branch_id: branchData?.id ?? null,
+    branch_id: parsed.data.branch_id,
   })
 
   if (profileError) {
@@ -68,11 +64,13 @@ export async function updateUserAction(id: string, formData: FormData) {
     name: formData.get('name') as string,
     phone: formData.get('phone') as string || undefined,
     role: formData.get('role') as string,
+    branch_id: formData.get('branch_id') as string,
   }
   const schema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     phone: z.string().optional(),
     role: z.enum(['admin', 'manager', 'pharmacist', 'cashier']),
+    branch_id: z.string().min(1, 'Branch is required'),
   })
   const parsed = schema.safeParse(raw)
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -80,7 +78,12 @@ export async function updateUserAction(id: string, formData: FormData) {
   const supabase = await createClient()
   const { error } = await supabase
     .from('user_profiles')
-    .update({ name: parsed.data.name, phone: parsed.data.phone ?? null, role: parsed.data.role })
+    .update({
+      name: parsed.data.name,
+      phone: parsed.data.phone ?? null,
+      role: parsed.data.role,
+      branch_id: parsed.data.branch_id,
+    })
     .eq('id', id)
   if (error) return { error: error.message }
   revalidatePath('/users')

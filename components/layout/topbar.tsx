@@ -25,6 +25,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, usePathname } from 'next/navigation'
+import { toast } from 'sonner'
 import type { UserProfile } from '@/lib/types/database'
 
 const routeLabels: Record<string, string> = {
@@ -68,6 +69,12 @@ export function Topbar({ user }: TopbarProps) {
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
+    // Toast fires before navigation — persists because the root layout
+    // (which holds <Toaster>) stays mounted during soft navigation.
+    toast.success('Signed out successfully', {
+      description: 'See you next time!',
+      duration: 3000,
+    })
     router.push('/login')
   }
 

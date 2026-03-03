@@ -1,14 +1,15 @@
 'use client'
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useTransition } from 'react'
 import {
   flexRender,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   type SortingState,
   type PaginationState,
+  type ColumnDef,
+  type VisibilityState,
 } from '@tanstack/react-table'
 import { format } from 'date-fns'
 import type { DateRange } from 'react-day-picker'
@@ -21,11 +22,17 @@ import {
   Printer,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   X,
   InboxIcon,
   ChevronDown,
   Download,
   CalendarIcon,
+  Search,
+  SlidersHorizontal,
+  Loader2,
+  Columns3,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,6 +51,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import {
   Table,
@@ -57,6 +66,7 @@ import { cn } from '@/lib/utils'
 import { formatINR } from '@/lib/utils/currency'
 import type { PosBill } from '@/lib/types/database'
 import { billColumns } from '@/app/(dashboard)/pos/bills/columns'
+import { fetchBillsAction, type FetchBillsParams } from '@/app/(dashboard)/pos/bills/actions'
 
 // ─── Export helpers ───────────────────────────────────────────────────────────
 
@@ -67,88 +77,157 @@ function billsToExportRows(bills: PosBill[]) {
     Customer: b.customer_name ?? 'Walk-in',
     Phone: b.customer_phone ?? '',
     'Payment Method': b.payment_method,
+    Status: b.status,
     Subtotal: b.subtotal,
     'Discount (₹)': b.discount_total,
     'Tax (₹)': b.tax_total,
     'Total (₹)': b.total,
-    Status: b.status,
   }))
+}
+
+// ─── Density config ───────────────────────────────────────────────────────────
+
+type Density = 'compact' | 'normal' | 'comfortable'
+const densityPadding: Record<Density, string> = {
+  compact: 'py-1.5 px-3',
+  normal: 'py-3 px-4',
+  comfortable: 'py-4 px-5',
+}
+
+// Column label map for the visibility dropdown
+const columnLabels: Record<string, string> = {
+  bill_no: 'Bill #',
+  customer_name: 'Customer',
+  payment_method: 'Payment',
+  subtotal: 'Subtotal',
+  tax_total: 'Tax',
+  discount_total: 'Discount',
+  total: 'Amount',
+  status: 'Status',
+  bill_date: 'Date',
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function BillsTable({ bills }: { bills: PosBill[] }) {
+interface BillsTableProps {
+  initialData: PosBill[]
+  initialTotalCount: number
+}
+
+export function BillsTable({ initialData, initialTotalCount }: BillsTableProps) {
+  // ── Server-side state ──
+  const [data, setData] = useState<PosBill[]>(initialData)
+  const [totalCount, setTotalCount] = useState(initialTotalCount)
+  const [isPending, startTransition] = useTransition()
+
+  // ── Filters ──
   const [search, setSearch]               = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter]   = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [dateRange, setDateRange]         = useState<DateRange | undefined>(undefined)
-  const [sorting, setSorting]             = useState<SortingState>([])
-  const [pagination, setPagination]       = useState<PaginationState>({ pageIndex: 0, pageSize: 10 })
 
-  const hasFilters =
-    !!search ||
-    statusFilter !== 'all' ||
-    paymentFilter !== 'all' ||
-    !!dateRange?.from
+  // ── Table state ──
+  const [sorting, setSorting]               = useState<SortingState>([{ id: 'created_at', desc: true }])
+  const [pagination, setPagination]         = useState<PaginationState>({ pageIndex: 0, pageSize: 15 })
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  const [density, setDensity]               = useState<Density>('normal')
+
+  const hasFilters = !!debouncedSearch || statusFilter !== 'all' || paymentFilter !== 'all' || !!dateRange?.from
+
+  // ── Debounced search ──
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPagination(p => ({ ...p, pageIndex: 0 }))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  // ── Fetch data when params change ──
+  useEffect(() => {
+    const sortCol = sorting[0]?.id ?? 'created_at'
+    const sortDir = sorting[0]?.desc === false ? 'asc' : 'desc'
+
+    const params: FetchBillsParams = {
+      page: pagination.pageIndex,
+      pageSize: pagination.pageSize,
+      search: debouncedSearch || undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      payment: paymentFilter !== 'all' ? paymentFilter : undefined,
+      dateFrom: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+      dateTo: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
+      sortBy: sortCol,
+      sortOrder: sortDir,
+    }
+
+    startTransition(async () => {
+      const result = await fetchBillsAction(params)
+      setData(result.data as PosBill[])
+      setTotalCount(result.totalCount)
+    })
+  }, [pagination.pageIndex, pagination.pageSize, debouncedSearch, statusFilter, paymentFilter, dateRange, sorting])
+
+  const pageCount = Math.ceil(totalCount / pagination.pageSize)
 
   const dateLabel = useMemo(() => {
     if (!dateRange?.from) return null
     const f = format(dateRange.from, 'dd/MM/yyyy')
     const t = dateRange.to ? format(dateRange.to, 'dd/MM/yyyy') : null
-    return t && t !== f ? `${f} => ${t}` : f
+    return t && t !== f ? `${f} – ${t}` : f
   }, [dateRange])
 
-  // ─── Client-side filtering ────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let data = bills
-    if (search) {
-      const q = search.toLowerCase()
-      data = data.filter(
-        (b) =>
-          b.bill_no.toLowerCase().includes(q) ||
-          (b.customer_name ?? '').toLowerCase().includes(q) ||
-          (b.customer_phone ?? '').includes(q)
-      )
-    }
-    if (statusFilter !== 'all')  data = data.filter((b) => b.status === statusFilter)
-    if (paymentFilter !== 'all') data = data.filter((b) => b.payment_method === paymentFilter)
-    if (dateRange?.from) {
-      const fromStr = format(dateRange.from, 'yyyy-MM-dd')
-      data = data.filter((b) => (b.bill_date ?? '') >= fromStr)
-    }
-    if (dateRange?.to) {
-      const toStr = format(dateRange.to, 'yyyy-MM-dd')
-      data = data.filter((b) => (b.bill_date ?? '') <= toStr)
-    }
-    return data
-  }, [bills, search, statusFilter, paymentFilter, dateRange])
-
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     setSearch('')
+    setDebouncedSearch('')
     setStatusFilter('all')
     setPaymentFilter('all')
     setDateRange(undefined)
-  }
+    setPagination(p => ({ ...p, pageIndex: 0 }))
+  }, [])
 
-  // ─── TanStack Table ───────────────────────────────────────────────────────
+  // ─── TanStack Table (manual mode) ──────────────────────────────────────────
   const table = useReactTable({
-    data: filtered,
+    data,
     columns: billColumns,
+    pageCount,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    onSortingChange: setSorting,
+    manualPagination: true,
+    manualSorting: true,
+    onSortingChange: (updater) => {
+      setSorting(updater)
+      setPagination(p => ({ ...p, pageIndex: 0 }))
+    },
     onPaginationChange: setPagination,
-    state: { sorting, pagination },
+    onColumnVisibilityChange: setColumnVisibility,
+    state: { sorting, pagination, columnVisibility },
   })
 
-  const totalRows = filtered.length
-  const fromRow   = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
-  const toRow     = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
+  const fromRow = totalCount === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const toRow = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalCount)
 
-  // ─── Excel export ─────────────────────────────────────────────────────────
-  const exportToExcel = useCallback(() => {
-    const rows = billsToExportRows(filtered)
+  // ─── Export (uses current page or fetches all filtered) ────────────────────
+  const exportAll = useCallback(async () => {
+    // Fetch all filtered rows for export (no pagination)
+    const params: FetchBillsParams = {
+      page: 0,
+      pageSize: 100000,
+      search: debouncedSearch || undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      payment: paymentFilter !== 'all' ? paymentFilter : undefined,
+      dateFrom: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+      dateTo: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
+      sortBy: sorting[0]?.id ?? 'created_at',
+      sortOrder: sorting[0]?.desc === false ? 'asc' : 'desc',
+    }
+    const result = await fetchBillsAction(params)
+    return result.data as PosBill[]
+  }, [debouncedSearch, statusFilter, paymentFilter, dateRange, sorting])
+
+  const exportToExcel = useCallback(async () => {
+    const allData = await exportAll()
+    const rows = billsToExportRows(allData)
     if (!rows.length) { toast.error('No data to export'); return }
     const ws = XLSX.utils.json_to_sheet(rows)
     ws['!cols'] = Object.keys(rows[0]).map((k) => ({
@@ -158,10 +237,11 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     XLSX.utils.book_append_sheet(wb, ws, 'Billing History')
     XLSX.writeFile(wb, `pos-bills-${format(new Date(), 'yyyy-MM-dd')}.xlsx`)
     toast.success(`${rows.length} bills exported to Excel`)
-  }, [filtered])
+  }, [exportAll])
 
-  const exportToCSV = useCallback(() => {
-    const rows = billsToExportRows(filtered)
+  const exportToCSV = useCallback(async () => {
+    const allData = await exportAll()
+    const rows = billsToExportRows(allData)
     if (!rows.length) { toast.error('No data to export'); return }
     const headers = Object.keys(rows[0])
     const lines = [
@@ -174,17 +254,18 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
       ),
     ]
     const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href     = url
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
     a.download = `pos-bills-${format(new Date(), 'yyyy-MM-dd')}.csv`
     a.click()
     URL.revokeObjectURL(url)
     toast.success(`${rows.length} bills exported to CSV`)
-  }, [filtered])
+  }, [exportAll])
 
   const copyToClipboard = useCallback(async () => {
-    const rows = billsToExportRows(filtered)
+    const allData = await exportAll()
+    const rows = billsToExportRows(allData)
     if (!rows.length) { toast.error('No data to copy'); return }
     const headers = Object.keys(rows[0])
     const lines = [
@@ -195,12 +276,13 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     ]
     await navigator.clipboard.writeText(lines.join('\n'))
     toast.success(`${rows.length} rows copied to clipboard`)
-  }, [filtered])
+  }, [exportAll])
 
-  const printTable = useCallback(() => {
-    if (!filtered.length) { toast.error('No data to print'); return }
-    const grandTotal = formatINR(filtered.reduce((s, b) => s + (b.total ?? 0), 0))
-    const rows = filtered.map((b, i) => `
+  const printTable = useCallback(async () => {
+    const allData = await exportAll()
+    if (!allData.length) { toast.error('No data to print'); return }
+    const grandTotal = formatINR(allData.reduce((s, b) => s + (b.total ?? 0), 0))
+    const rows = allData.map((b, i) => `
       <tr style="background:${i % 2 === 1 ? '#fafafa' : '#fff'}">
         <td class="mono">${b.bill_no}</td>
         <td>${b.bill_date ? format(new Date(b.bill_date), 'dd/MM/yyyy') : '—'}</td>
@@ -228,8 +310,8 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
 </style></head>
 <body>
   <div class="hdr">
-    <h2>POS/Bill History</h2>
-    <p>Printed on ${format(new Date(), 'dd/MM/yyyy, hh:mm a')} &middot; ${filtered.length} record${filtered.length !== 1 ? 's' : ''}${dateLabel ? ' &middot; ' + dateLabel : ''}</p>
+    <h2>POS Billing History</h2>
+    <p>Printed on ${format(new Date(), 'dd/MM/yyyy, hh:mm a')} &middot; ${allData.length} record${allData.length !== 1 ? 's' : ''}${dateLabel ? ' &middot; ' + dateLabel : ''}</p>
   </div>
   <table>
     <thead><tr>
@@ -239,7 +321,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     </tr></thead>
     <tbody>${rows}</tbody>
     <tfoot><tr>
-      <td colspan="6">Grand Total (${filtered.length} bills)</td>
+      <td colspan="6">Grand Total (${allData.length} bills)</td>
       <td class="right">${grandTotal}</td>
     </tr></tfoot>
   </table>
@@ -249,59 +331,104 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
     const win = window.open('', '_blank', 'width=1000,height=700')
     if (win) { win.document.write(html); win.document.close() }
     else toast.error('Pop-up blocked — please allow pop-ups to print.')
-  }, [filtered, dateLabel])
+  }, [exportAll, dateLabel])
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-3">
 
-      {/* ── Primary toolbar: Show entries + Search (single row on all sizes) ─ */}
+      {/* ══ Toolbar Row 1: Search + Column Visibility + Density + Export ══════ */}
       <div className="flex items-center gap-2">
 
-        {/* Show N entries — compact on mobile */}
-        <div className="flex items-center gap-1.5 text-sm shrink-0">
-          <span className="hidden sm:inline text-muted-foreground">Show</span>
-          <Select
-            value={String(pagination.pageSize)}
-            onValueChange={(v) => setPagination({ pageIndex: 0, pageSize: Number(v) })}
-          >
-            <SelectTrigger className="h-8 w-[60px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[10, 15, 25, 50].map((n) => (
-                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="hidden sm:inline text-muted-foreground">entries</span>
-        </div>
-
-        {/* Search — takes all remaining space on mobile */}
-        <div className="relative flex-1">
+        {/* Search */}
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Bill no / customer..."
+            placeholder="Search bill#, customer, phone..."
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setPagination((p) => ({ ...p, pageIndex: 0 }))
-            }}
-            className="h-8 w-full pr-7"
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-9 pl-8 pr-8 text-sm"
           />
           {search && (
             <button
               onClick={() => setSearch('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           )}
         </div>
 
-        {/* Export — icon-only on mobile, full label on desktop */}
+        {/* Page size */}
+        <Select
+          value={String(pagination.pageSize)}
+          onValueChange={(v) => setPagination({ pageIndex: 0, pageSize: Number(v) })}
+        >
+          <SelectTrigger className="h-9 w-[70px] text-xs shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[10, 15, 25, 50, 100].map((n) => (
+              <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Column visibility toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 text-xs">
+            <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 text-xs">
+              <Columns3 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Columns</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuLabel className="text-xs">Toggle columns</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {table.getAllLeafColumns()
+              .filter(col => col.id !== 'actions')
+              .map(col => (
+                <DropdownMenuCheckboxItem
+                  key={col.id}
+                  checked={col.getIsVisible()}
+                  onCheckedChange={(v) => col.toggleVisibility(!!v)}
+                  className="text-xs capitalize"
+                >
+                  {columnLabels[col.id] ?? col.id}
+                </DropdownMenuCheckboxItem>
+              ))
+            }
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Density toggle */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 text-xs">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">View</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-36">
+            <DropdownMenuLabel className="text-xs">Row density</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {(['compact', 'normal', 'comfortable'] as Density[]).map(d => (
+              <DropdownMenuCheckboxItem
+                key={d}
+                checked={density === d}
+                onCheckedChange={() => setDensity(d)}
+                className="text-xs capitalize"
+              >
+                {d}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Export dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-9 shrink-0 gap-1.5 text-xs">
               <Download className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Export</span>
               <ChevronDown className="hidden sm:inline h-3 w-3 text-muted-foreground" />
@@ -324,18 +451,17 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={printTable} className="gap-2.5 cursor-pointer text-sm">
               <Printer className="h-3.5 w-3.5 text-muted-foreground" />
-              Print
+              Print all
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
       </div>
 
-      {/* ── Filter row: 2-col grid on mobile, flex-wrap on desktop ──────────── */}
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center pb-1">
+      {/* ══ Filter Row 2: Status + Payment + Date Range + Reset ═══════════════ */}
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
 
         {/* Status */}
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPagination(p => ({ ...p, pageIndex: 0 })) }}>
           <SelectTrigger className="h-8 w-full sm:w-[130px] text-xs">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -349,7 +475,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
         </Select>
 
         {/* Payment */}
-        <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setPagination((p) => ({ ...p, pageIndex: 0 })) }}>
+        <Select value={paymentFilter} onValueChange={(v) => { setPaymentFilter(v); setPagination(p => ({ ...p, pageIndex: 0 })) }}>
           <SelectTrigger className="h-8 w-full sm:w-[130px] text-xs">
             <SelectValue placeholder="Payment" />
           </SelectTrigger>
@@ -362,7 +488,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           </SelectContent>
         </Select>
 
-        {/* Date range — full width on mobile */}
+        {/* Date range */}
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -373,13 +499,11 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
               )}
             >
               <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">
-                {dateLabel ?? 'Date range'}
-              </span>
+              <span className="truncate">{dateLabel ?? 'Date range'}</span>
               {dateRange?.from && (
                 <X
                   className="ml-auto h-3 w-3 opacity-60 hover:opacity-100 shrink-0"
-                  onClick={(e) => { e.stopPropagation(); setDateRange(undefined) }}
+                  onClick={(e) => { e.stopPropagation(); setDateRange(undefined); setPagination(p => ({ ...p, pageIndex: 0 })) }}
                 />
               )}
             </Button>
@@ -388,7 +512,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
             <Calendar
               mode="range"
               selected={dateRange}
-              onSelect={setDateRange}
+              onSelect={(range) => { setDateRange(range); setPagination(p => ({ ...p, pageIndex: 0 })) }}
               numberOfMonths={1}
               disabled={{ after: new Date() }}
               captionLayout="dropdown"
@@ -396,7 +520,7 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           </PopoverContent>
         </Popover>
 
-        {/* Reset — full width on mobile, auto on desktop */}
+        {/* Active filter count + reset */}
         {hasFilters && (
           <Button
             variant="ghost"
@@ -409,19 +533,27 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
           </Button>
         )}
 
+        {/* Loading indicator */}
+        {isPending && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-auto">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Loading...
+          </div>
+        )}
       </div>
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
+      {/* ══ Data Table ════════════════════════════════════════════════════════ */}
       <div className="rounded-xl border border-border shadow-sm overflow-hidden bg-card">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-10">
               {table.getHeaderGroups().map((hg) => (
                 <TableRow key={hg.id} className="bg-muted/60 hover:bg-muted/60 border-b-2 border-border">
                   {hg.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="py-3 px-4 first:pl-5 last:pr-5"
+                      className={cn('first:pl-5 last:pr-5', densityPadding[density])}
+                      style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                     >
                       {header.isPlaceholder
                         ? null
@@ -442,7 +574,10 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3 px-4 first:pl-5 last:pr-5">
+                      <TableCell
+                        key={cell.id}
+                        className={cn('first:pl-5 last:pr-5', densityPadding[density])}
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
@@ -450,11 +585,13 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={billColumns.length} className="h-36 text-center">
+                  <TableCell colSpan={table.getVisibleLeafColumns().length} className="h-36 text-center">
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <InboxIcon className="h-8 w-8 opacity-30" />
-                      <span className="text-sm">No bills match the current filters</span>
-                      {hasFilters && (
+                      <span className="text-sm">
+                        {isPending ? 'Loading bills...' : 'No bills match the current filters'}
+                      </span>
+                      {hasFilters && !isPending && (
                         <button onClick={clearAll} className="text-xs text-primary hover:underline">
                           Clear all filters
                         </button>
@@ -468,33 +605,78 @@ export function BillsTable({ bills }: { bills: PosBill[] }) {
         </div>
       </div>
 
-      {/* ── Pagination ──────────────────────────────────────────────────────── */}
+      {/* ══ Pagination ════════════════════════════════════════════════════════ */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 text-sm text-muted-foreground">
-        <span>
-          {totalRows === 0
+        <span className="text-xs">
+          {totalCount === 0
             ? 'No records found'
-            : `Showing ${fromRow} to ${toRow} of ${totalRows} entries`}
+            : `Showing ${fromRow}–${toRow} of ${totalCount.toLocaleString()} entries`}
         </span>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline" size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="text-sm font-medium px-3 py-1 rounded-md bg-muted text-foreground">
-            {pagination.pageIndex + 1} / {table.getPageCount() || 1}
-          </span>
-          <Button
-            variant="outline" size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            className="h-8 w-8 p-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+
+        <div className="flex items-center gap-2">
+          {/* Go to page input */}
+          <div className="hidden sm:flex items-center gap-1.5 text-xs">
+            <span>Go to</span>
+            <Input
+              type="number"
+              min={1}
+              max={pageCount || 1}
+              defaultValue={pagination.pageIndex + 1}
+              key={pagination.pageIndex}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = parseInt((e.target as HTMLInputElement).value)
+                  if (val >= 1 && val <= pageCount) {
+                    setPagination(p => ({ ...p, pageIndex: val - 1 }))
+                  }
+                }
+              }}
+              className="h-7 w-14 text-center text-xs"
+            />
+          </div>
+
+          {/* Page navigation */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline" size="sm"
+              onClick={() => setPagination(p => ({ ...p, pageIndex: 0 }))}
+              disabled={pagination.pageIndex === 0 || isPending}
+              className="h-8 w-8 p-0"
+              title="First page"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline" size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage() || isPending}
+              className="h-8 w-8 p-0"
+              title="Previous page"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs font-medium px-3 py-1 rounded-md bg-muted text-foreground min-w-[60px] text-center">
+              {pagination.pageIndex + 1} / {pageCount || 1}
+            </span>
+            <Button
+              variant="outline" size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage() || isPending}
+              className="h-8 w-8 p-0"
+              title="Next page"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline" size="sm"
+              onClick={() => setPagination(p => ({ ...p, pageIndex: pageCount - 1 }))}
+              disabled={pagination.pageIndex >= pageCount - 1 || isPending}
+              className="h-8 w-8 p-0"
+              title="Last page"
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

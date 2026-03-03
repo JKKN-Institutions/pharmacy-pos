@@ -11,7 +11,8 @@ export interface UserProfile {
   email: string
   phone: string | null
   role: UserRole
-  branch_id: string
+  branch_id: string | null
+  is_active: boolean
   created_at: string
   updated_at: string
 }
@@ -120,7 +121,7 @@ export interface PurchaseItem {
 // ─── POS Bills ────────────────────────────────────────────────────────────────
 
 export type PaymentMethod = 'cash' | 'card' | 'upi' | 'credit'
-export type BillStatus = 'saved' | 'synced' | 'sync_error'
+export type BillStatus = 'saved' | 'synced' | 'sync_error' | 'cancelled'
 
 export interface PosBill {
   id: string
@@ -141,6 +142,9 @@ export interface PosBill {
   payment_method: PaymentMethod
   status: BillStatus
   note: string | null
+  cancel_reason: string | null
+  cancelled_at: string | null
+  cancelled_by: string | null
   created_by: string
   created_at: string
   updated_at: string

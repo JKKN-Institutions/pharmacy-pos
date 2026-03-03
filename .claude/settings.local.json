@@ -229,7 +229,9 @@
       "Bash(git:*)",
       "Bash(rm:*)",
       "mcp__supabase__deploy_edge_function",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(bun run:*)",
+      "Bash(cmd:*)"
     ],
     "deny": [],
     "ask": []

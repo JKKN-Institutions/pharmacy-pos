@@ -3,6 +3,123 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 
+// ─── Paginated bills query ────────────────────────────────────────────────────
+
+export interface FetchBillsParams {
+  page: number
+  pageSize: number
+  search?: string
+  status?: string
+  payment?: string
+  dateFrom?: string
+  dateTo?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+}
+
+export interface FetchBillsResult {
+  data: any[]
+  totalCount: number
+}
+
+export async function fetchBillsAction(params: FetchBillsParams): Promise<FetchBillsResult> {
+  const {
+    page,
+    pageSize,
+    search,
+    status,
+    payment,
+    dateFrom,
+    dateTo,
+    sortBy = 'created_at',
+    sortOrder = 'desc',
+  } = params
+
+  const supabase = await createClient()
+
+  let query = supabase
+    .from('pos_bills')
+    .select('*', { count: 'exact' })
+
+  // ── Filters ──
+  if (search) {
+    // Search by bill_no, customer_name, or customer_phone
+    query = query.or(
+      `bill_no.ilike.%${search}%,customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%`
+    )
+  }
+  if (status && status !== 'all') {
+    query = query.eq('status', status)
+  }
+  if (payment && payment !== 'all') {
+    query = query.eq('payment_method', payment)
+  }
+  if (dateFrom) {
+    query = query.gte('bill_date', dateFrom)
+  }
+  if (dateTo) {
+    query = query.lte('bill_date', dateTo)
+  }
+
+  // ── Sorting ──
+  const validSortColumns = ['bill_no', 'customer_name', 'subtotal', 'tax_total', 'discount_total', 'total', 'bill_date', 'created_at', 'payment_method', 'status']
+  const col = validSortColumns.includes(sortBy) ? sortBy : 'created_at'
+  query = query.order(col, { ascending: sortOrder === 'asc' })
+
+  // ── Pagination ──
+  const from = page * pageSize
+  const to = from + pageSize - 1
+  query = query.range(from, to)
+
+  const { data, count, error } = await query
+
+  if (error) {
+    console.error('[fetchBills] query failed:', error.message)
+    return { data: [], totalCount: 0 }
+  }
+
+  return {
+    data: data ?? [],
+    totalCount: count ?? 0,
+  }
+}
+
+// ─── Summary stats (separate lightweight queries) ─────────────────────────────
+
+export async function fetchBillsSummaryAction() {
+  const supabase = await createClient()
+
+  // Total revenue — sum of completed bills
+  const { data: totalData } = await supabase
+    .from('pos_bills')
+    .select('total')
+    .in('status', ['paid', 'saved'])
+
+  const totalRevenue = (totalData ?? []).reduce((sum, b) => sum + (b.total ?? 0), 0)
+
+  // Today's revenue
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const { data: todayData } = await supabase
+    .from('pos_bills')
+    .select('total')
+    .in('status', ['paid', 'saved'])
+    .eq('bill_date', todayStr)
+
+  const todayRevenue = (todayData ?? []).reduce((sum, b) => sum + (b.total ?? 0), 0)
+
+  // Pending count
+  const { count: pendingCount } = await supabase
+    .from('pos_bills')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+
+  return {
+    totalRevenue,
+    todayRevenue,
+    pendingCount: pendingCount ?? 0,
+  }
+}
+
 export async function getPharmacySettingsAction(): Promise<Record<string, string>> {
   const supabase = await createClient()
   const { data } = await supabase
@@ -25,18 +142,41 @@ export async function getBillItemsAction(billId: string) {
   return { data }
 }
 
-export async function deleteBillAction(id: string) {
+export async function cancelBillAction(id: string, reason: string) {
   if (!id) return { error: 'Bill ID is required' }
+  if (!reason.trim()) return { error: 'Cancellation reason is required' }
 
   const supabase = await createClient()
 
-  // 1. Fetch bill items BEFORE deleting — needed to restore stock
+  // 0. Verify bill exists and is not already cancelled
+  const { data: bill } = await supabase
+    .from('pos_bills')
+    .select('id, status')
+    .eq('id', id)
+    .single()
+
+  if (!bill) return { error: 'Bill not found' }
+  if (bill.status === 'cancelled') return { error: 'Bill is already cancelled' }
+
+  // 1. Get current user for cancelled_by
+  const { data: { user } } = await supabase.auth.getUser()
+  let profileId: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .single()
+    profileId = profile?.id ?? null
+  }
+
+  // 2. Fetch bill items — needed to restore stock
   const { data: billItems } = await supabase
     .from('pos_bill_items')
     .select('stock_batch_id, qty')
     .eq('bill_id', id)
 
-  // 2. Restore stock for each line item
+  // 3. Restore stock for each line item
   if (billItems && billItems.length > 0) {
     for (const item of billItems) {
       if (!item.stock_batch_id) continue
@@ -59,20 +199,15 @@ export async function deleteBillAction(id: string) {
     }
   }
 
-  // 3. Delete line items
-  const { error: itemsError } = await supabase
-    .from('pos_bill_items')
-    .delete()
-    .eq('bill_id', id)
-
-  if (itemsError) {
-    console.warn('Could not delete bill items:', itemsError.message)
-  }
-
-  // 4. Delete the bill
+  // 4. Update bill status to cancelled (preserve the record — don't delete)
   const { error } = await supabase
     .from('pos_bills')
-    .delete()
+    .update({
+      status: 'cancelled',
+      cancel_reason: reason.trim(),
+      cancelled_at: new Date().toISOString(),
+      cancelled_by: profileId,
+    })
     .eq('id', id)
 
   if (error) return { error: error.message }

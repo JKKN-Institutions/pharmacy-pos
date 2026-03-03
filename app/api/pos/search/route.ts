@@ -9,60 +9,76 @@ export async function GET(req: NextRequest) {
 
   const supabase = await createClient()
 
-  // Step 1: Find matching active medicines by name or company
-  // Split into two queries to avoid PostgREST !inner + .or() + .gt() conflicts
-  const { data: medicineRows, error: medError } = await supabase
+  // ── Strategy: FTS first (uses GIN index), ilike fallback for substring matches ──
+  let medicines = await searchFTS(supabase, q)
+
+  // FTS requires word-prefix matching. If it returns nothing, fall back to
+  // ilike which handles mid-word matches like "cetam" → "Paracetamol"
+  if (medicines.length === 0) {
+    medicines = await searchIlike(supabase, q)
+  }
+
+  return NextResponse.json({ medicines })
+}
+
+async function searchFTS(supabase: any, query: string) {
+  // Single embedded-join query using textSearch() — hits the GIN index
+  const { data, error } = await supabase
     .from('medicines')
-    .select('id, name, company, tax_percent')
+    .select(`
+      id, name, company, tax_percent,
+      stock_batches!inner(id, batch_no, expiry_date, sale_price, available_qty)
+    `)
     .eq('status', 'active')
-    .or(`name.ilike.%${q}%,company.ilike.%${q}%`)
+    .textSearch('name', query, { type: 'websearch' })
+    .gt('stock_batches.available_qty', 0)
     .order('name')
     .limit(20)
 
-  if (medError) {
-    return NextResponse.json({ error: medError.message }, { status: 500 })
+  if (error) {
+    console.error('[search] FTS query failed:', error.message)
+    return []
   }
 
-  if (!medicineRows || medicineRows.length === 0) {
-    return NextResponse.json({ medicines: [] })
+  return formatResults(data)
+}
+
+async function searchIlike(supabase: any, query: string) {
+  // Fallback: ilike with embedded join — handles substring matches
+  const { data, error } = await supabase
+    .from('medicines')
+    .select(`
+      id, name, company, tax_percent,
+      stock_batches!inner(id, batch_no, expiry_date, sale_price, available_qty)
+    `)
+    .eq('status', 'active')
+    .or(`name.ilike.%${query}%,company.ilike.%${query}%`)
+    .gt('stock_batches.available_qty', 0)
+    .order('name')
+    .limit(20)
+
+  if (error) {
+    console.error('[search] ilike query failed:', error.message)
+    return []
   }
 
-  // Step 2: Fetch available batches for those medicines (FEFO order)
-  const ids = medicineRows.map((m) => m.id)
-  const { data: batchRows, error: batchError } = await supabase
-    .from('stock_batches')
-    .select('id, medicine_id, batch_no, expiry_date, sale_price, available_qty')
-    .in('medicine_id', ids)
-    .gt('available_qty', 0)
-    .order('expiry_date', { ascending: true })
+  return formatResults(data)
+}
 
-  if (batchError) {
-    return NextResponse.json({ error: batchError.message }, { status: 500 })
-  }
-
-  // Group batches by medicine_id
-  const batchMap: Record<string, any[]> = {}
-  for (const b of batchRows ?? []) {
-    if (!batchMap[b.medicine_id]) batchMap[b.medicine_id] = []
-    batchMap[b.medicine_id].push({
-      id: b.id,
-      batch_no: b.batch_no,
-      expiry_date: b.expiry_date,
-      sale_price: Number(b.sale_price),
-      available_qty: Number(b.available_qty),
-    })
-  }
-
-  // Build response — only include medicines that have available stock
-  const medicines = medicineRows
-    .map((m) => ({
-      id: m.id,
-      name: m.name,
-      company: m.company ?? null,
-      tax_percent: Number(m.tax_percent ?? 0),
-      batches: batchMap[m.id] ?? [],
-    }))
-    .filter((m) => m.batches.length > 0)
-
-  return NextResponse.json({ medicines })
+function formatResults(data: any[] | null) {
+  return (data ?? []).map((m: any) => ({
+    id: m.id,
+    name: m.name,
+    company: m.company ?? null,
+    tax_percent: Number(m.tax_percent ?? 0),
+    batches: ((m.stock_batches ?? []) as any[])
+      .sort((a, b) => (a.expiry_date as string).localeCompare(b.expiry_date as string))
+      .map((b) => ({
+        id: b.id,
+        batch_no: b.batch_no,
+        expiry_date: b.expiry_date,
+        sale_price: Number(b.sale_price),
+        available_qty: Number(b.available_qty),
+      })),
+  }))
 }

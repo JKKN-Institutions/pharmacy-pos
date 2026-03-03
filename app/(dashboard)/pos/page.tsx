@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { PosPageClient } from './_components/pos-page-client'
+import { fetchBillsAction, fetchBillsSummaryAction } from './bills/actions'
 
 export default async function POSPage() {
   const supabase = await createClient()
@@ -16,38 +17,21 @@ export default async function POSPage() {
     profile = data
   }
 
-  const { data: bills, count } = await supabase
-    .from('pos_bills')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-
-  const billsData = bills ?? []
-  const completedStatuses = ['paid', 'saved']
-
-  const totalRevenue = billsData
-    .filter((b) => completedStatuses.includes(b.status ?? ''))
-    .reduce((sum, b) => sum + (b.total ?? 0), 0)
-
-  const todayStr = new Date().toISOString().slice(0, 10)
-  const todayRevenue = billsData
-    .filter(
-      (b) =>
-        completedStatuses.includes(b.status ?? '') &&
-        b.bill_date?.slice(0, 10) === todayStr
-    )
-    .reduce((sum, b) => sum + (b.total ?? 0), 0)
-
-  const pendingCount = billsData.filter((b) => b.status === 'pending').length
+  // Parallel fetch: first page of bills + summary stats
+  const [billsResult, summary] = await Promise.all([
+    fetchBillsAction({ page: 0, pageSize: 15, sortBy: 'created_at', sortOrder: 'desc' }),
+    fetchBillsSummaryAction(),
+  ])
 
   return (
     <PosPageClient
       userId={profile?.id}
       branchId={profile?.branch_id}
-      bills={billsData}
-      totalBills={count ?? 0}
-      totalRevenue={totalRevenue}
-      todayRevenue={todayRevenue}
-      pendingCount={pendingCount}
+      initialBills={billsResult.data as any}
+      initialTotalCount={billsResult.totalCount}
+      totalRevenue={summary.totalRevenue}
+      todayRevenue={summary.todayRevenue}
+      pendingCount={summary.pendingCount}
     />
   )
 }

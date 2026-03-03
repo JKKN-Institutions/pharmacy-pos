@@ -31,7 +31,9 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/login?error=unauthorized`)
       }
 
-      return NextResponse.redirect(`${origin}${next}`)
+      const dest = new URL(`${origin}${next}`)
+      dest.searchParams.set('login', '1')
+      return NextResponse.redirect(dest.toString())
     }
   }
 

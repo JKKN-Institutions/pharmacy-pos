@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { format } from 'date-fns'
 import type { BillItem } from './pos-client'
-import { db } from '@/lib/offline/db'
+import { useMedicineSearch } from '@/lib/hooks/use-medicine-search'
 import { cn } from '@/lib/utils'
 
 interface TaxRate {
@@ -40,11 +40,9 @@ function MedicineCombobox({
   externalRef?: React.RefObject<HTMLInputElement | null>
 }) {
   const internalRef = useRef<HTMLInputElement | null>(null)
-  const [search, setSearch] = useState('')
-  const [results, setResults] = useState<any[]>([])
-  const [open, setOpen] = useState(false)
+  const { query, setQuery, results, clear } = useMedicineSearch()
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [open, setOpen] = useState(false)
 
   // Merge the external "focus" ref and our internal positioning ref into one callback ref
   function mergeRef(el: HTMLInputElement | null) {
@@ -63,43 +61,18 @@ function MedicineCombobox({
     })
   }
 
-  const handleSearch = useCallback((query: string) => {
-    setSearch(query)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (query.length < 2) {
-      setResults([])
-      setOpen(false)
-      return
-    }
-    debounceRef.current = setTimeout(async () => {
-      try {
-        let medicines: any[] = []
-        if (navigator.onLine) {
-          const res = await fetch(`/api/pos/search?q=${encodeURIComponent(query)}`)
-          if (res.ok) {
-            medicines = (await res.json()).medicines ?? []
-          } else {
-            const q = query.toLowerCase()
-            medicines = await db.medicines.filter(m => m.name.toLowerCase().includes(q)).limit(10).toArray()
-          }
-        } else {
-          const q = query.toLowerCase()
-          medicines = await db.medicines.filter(m => m.name.toLowerCase().includes(q)).limit(10).toArray()
-        }
-        computePos()
-        setResults(medicines)
-        setOpen(medicines.length > 0)
-      } catch {
-        setResults([])
-        setOpen(false)
-      }
-    }, 300)
-  }, [])
+  // Open dropdown when results are available
+  const hasResults = results.length > 0 && query.length >= 2
+  if (hasResults && !open) {
+    computePos()
+    setOpen(true)
+  } else if (!hasResults && open) {
+    setOpen(false)
+  }
 
   function handleSelectBatch(medicine: any, batch: any) {
     onSelect(medicine, batch)
-    setSearch('')
-    setResults([])
+    clear()
     setOpen(false)
   }
 
@@ -165,8 +138,8 @@ function MedicineCombobox({
     <div className="relative">
       <Input
         ref={mergeRef}
-        value={search}
-        onChange={e => handleSearch(e.target.value)}
+        value={query}
+        onChange={e => setQuery(e.target.value)}
         onFocus={computePos}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={disabled ? 'Syncing...' : 'Search medicine...'}

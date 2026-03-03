@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { DashboardShell } from '@/components/layout/dashboard-shell'
+import { LoginSuccessToast } from '@/components/auth/login-success-toast'
 
 // All dashboard routes fetch user-specific data on every request
 export const dynamic = 'force-dynamic'
@@ -25,6 +27,9 @@ export default async function DashboardLayout({
 
   return (
     <DashboardShell profile={profile}>
+      <Suspense>
+        <LoginSuccessToast name={profile.name} />
+      </Suspense>
       {children}
     </DashboardShell>
   )

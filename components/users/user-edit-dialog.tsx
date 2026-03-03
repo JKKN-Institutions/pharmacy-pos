@@ -37,11 +37,17 @@ const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   phone: z.string().optional(),
   role: z.enum(['admin', 'manager', 'pharmacist', 'cashier']),
+  branch_id: z.string().min(1, 'Branch is required'),
 })
 
 type FormValues = z.infer<typeof schema>
 
-export function UserEditDialog({ user }: { user: UserProfile }) {
+interface UserEditDialogProps {
+  user: UserProfile
+  branches: { id: string; name: string }[]
+}
+
+export function UserEditDialog({ user, branches }: UserEditDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -52,6 +58,7 @@ export function UserEditDialog({ user }: { user: UserProfile }) {
       name: user.name ?? '',
       phone: user.phone ?? '',
       role: (user.role as FormValues['role']) ?? 'cashier',
+      branch_id: user.branch_id ?? (branches.length === 1 ? branches[0].id : ''),
     },
   })
 
@@ -129,6 +136,28 @@ export function UserEditDialog({ user }: { user: UserProfile }) {
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="pharmacist">Pharmacist</SelectItem>
                       <SelectItem value="cashier">Cashier</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="branch_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Branch</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select branch" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent position="popper">
+                      {branches.map(b => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -15,70 +15,90 @@ const roleColors: Record<string, string> = {
   cashier: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 }
 
-export const userColumns: ColumnDef<UserProfile>[] = [
-  {
-    accessorKey: 'name',
-    header: 'Name',
-    cell: ({ row }) => (
-      <div className="font-medium">{row.getValue('name')}</div>
-    ),
-  },
-  {
-    accessorKey: 'email',
-    header: 'Email',
-    cell: ({ row }) => (
-      <div className="text-muted-foreground text-sm">{row.getValue('email')}</div>
-    ),
-  },
-  {
-    accessorKey: 'phone',
-    header: 'Phone',
-    cell: ({ row }) => (
-      <div className="text-sm">{row.getValue('phone') ?? '—'}</div>
-    ),
-  },
-  {
-    accessorKey: 'role',
-    header: 'Role',
-    cell: ({ row }) => {
-      const role = row.getValue('role') as string
-      return (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${roleColors[role] ?? ''}`}>
-          {role}
-        </span>
-      )
+export function getUserColumns(
+  branches: { id: string; name: string }[],
+): ColumnDef<UserProfile>[] {
+  // Build a quick lookup for branch name display
+  const branchMap = new Map(branches.map(b => [b.id, b.name]))
+
+  return [
+    {
+      accessorKey: 'name',
+      header: 'Name',
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue('name')}</div>
+      ),
     },
-  },
-  {
-    accessorKey: 'is_active',
-    header: 'Status',
-    cell: ({ row }) => (
-      <Badge variant={row.getValue('is_active') ? 'default' : 'secondary'}>
-        {row.getValue('is_active') ? 'Active' : 'Inactive'}
-      </Badge>
-    ),
-  },
-  {
-    id: 'actions',
-    cell: ({ row }) => {
-      const user = row.original
-      return (
-        <div className="flex items-center gap-1">
-          <UserEditDialog user={user} />
-          <ConfirmDialog
-            title="Delete user?"
-            description={`Remove ${user.name} from the system. This cannot be undone.`}
-            onConfirm={async () => {
-              const result = await deleteUserAction(user.id)
-              if (result?.error) {
-                toast.error(result.error)
-              } else {
-                toast.success('User deleted')
-              }
-            }}
-          />
-        </div>
-      )
+    {
+      accessorKey: 'email',
+      header: 'Email',
+      cell: ({ row }) => (
+        <div className="text-muted-foreground text-sm">{row.getValue('email')}</div>
+      ),
     },
-  },
-]
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+      cell: ({ row }) => (
+        <div className="text-sm">{row.getValue('phone') ?? '—'}</div>
+      ),
+    },
+    {
+      accessorKey: 'role',
+      header: 'Role',
+      cell: ({ row }) => {
+        const role = row.getValue('role') as string
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${roleColors[role] ?? ''}`}>
+            {role}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: 'branch_id',
+      header: 'Branch',
+      cell: ({ row }) => {
+        const branchId = row.getValue('branch_id') as string | null
+        const name = branchId ? branchMap.get(branchId) : null
+        return (
+          <span className={`text-sm ${name ? '' : 'text-muted-foreground italic'}`}>
+            {name ?? 'Unassigned'}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: 'is_active',
+      header: 'Status',
+      cell: ({ row }) => (
+        <Badge variant={row.getValue('is_active') ? 'default' : 'secondary'}>
+          {row.getValue('is_active') ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      cell: ({ row }) => {
+        const user = row.original
+        return (
+          <div className="flex items-center gap-1">
+            <UserEditDialog user={user} branches={branches} />
+            <ConfirmDialog
+              title="Delete user?"
+              description={`Remove ${user.name} from the system. This cannot be undone.`}
+              onConfirm={async () => {
+                const result = await deleteUserAction(user.id)
+                if (result?.error) {
+                  toast.error(result.error)
+                } else {
+                  toast.success('User deleted')
+                }
+              }}
+            />
+          </div>
+        )
+      },
+    },
+  ]
+}

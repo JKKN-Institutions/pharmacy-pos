@@ -37,19 +37,31 @@ const schema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
   role: z.enum(['admin', 'manager', 'pharmacist', 'cashier']),
+  branch_id: z.string().min(1, 'Branch is required'),
   password: z.string().min(8),
 })
 
 type FormValues = z.infer<typeof schema>
 
-export function UserFormDialog() {
+interface UserFormDialogProps {
+  branches: { id: string; name: string }[]
+}
+
+export function UserFormDialog({ branches }: UserFormDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const form = useForm<FormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
-    defaultValues: { name: '', email: '', phone: '', role: 'cashier', password: '' },
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      role: 'cashier',
+      branch_id: branches.length === 1 ? branches[0].id : '',
+      password: '',
+    },
   })
 
   async function onSubmit(values: FormValues) {
@@ -137,6 +149,28 @@ export function UserFormDialog() {
                       <SelectItem value="manager">Manager</SelectItem>
                       <SelectItem value="pharmacist">Pharmacist</SelectItem>
                       <SelectItem value="cashier">Cashier</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="branch_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Branch</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select branch" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {branches.map(b => (
+                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

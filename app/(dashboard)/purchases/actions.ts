@@ -114,6 +114,123 @@ export async function createPurchaseAction(data: {
   redirect('/purchases')
 }
 
+// ─── Update Purchase ─────────────────────────────────────────────────────────
+
+export async function updatePurchaseAction(
+  purchaseId: string,
+  data: {
+    supplier_id: string
+    invoice_no: string
+    purchase_date: string
+    items: PurchaseItemInput[]
+    subtotal: number
+    discount: number
+    tax: number
+    total: number
+  },
+) {
+  if (!purchaseId) return { error: 'Purchase ID is required' }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: userProfile } = await supabase
+    .from('user_profiles')
+    .select('id, branch_id')
+    .eq('auth_user_id', user?.id ?? '')
+    .single()
+
+  const branchId = userProfile?.branch_id ?? null
+
+  // 0. Verify purchase exists
+  const { data: existing } = await supabase
+    .from('purchases')
+    .select('id')
+    .eq('id', purchaseId)
+    .single()
+  if (!existing) return { error: 'Purchase not found' }
+
+  // 1. Safety check — block edit if any stock batch from this purchase has been sold
+  const { data: soldBatches } = await supabase
+    .from('stock_batches')
+    .select('id, batch_no, sold_qty')
+    .eq('purchase_id', purchaseId)
+    .gt('sold_qty', 0)
+
+  if (soldBatches && soldBatches.length > 0) {
+    const batchNos = soldBatches.map(b => b.batch_no).join(', ')
+    return {
+      error: `Cannot edit: batches already sold through POS (${batchNos}). Cancel related bills first.`,
+    }
+  }
+
+  // 2. Delete old stock batches (safe — sold_qty is 0 for all)
+  const { error: delStockErr } = await supabase
+    .from('stock_batches')
+    .delete()
+    .eq('purchase_id', purchaseId)
+  if (delStockErr) return { error: `Failed to update stock: ${delStockErr.message}` }
+
+  // 3. Delete old purchase items
+  await supabase.from('purchase_items').delete().eq('purchase_id', purchaseId)
+
+  // 4. Update purchase header
+  const { error: headerErr } = await supabase
+    .from('purchases')
+    .update({
+      supplier_id: data.supplier_id,
+      invoice_no: data.invoice_no,
+      purchase_date: data.purchase_date,
+      subtotal: data.subtotal,
+      discount: data.discount,
+      tax: data.tax,
+      total: data.total,
+    })
+    .eq('id', purchaseId)
+  if (headerErr) return { error: headerErr.message }
+
+  // 5. Insert updated purchase items
+  const { error: itemsErr } = await supabase.from('purchase_items').insert(
+    data.items.map(item => ({
+      purchase_id:    purchaseId,
+      medicine_id:    item.medicine_id,
+      batch_no:       item.batch_no,
+      expiry_date:    item.expiry_date,
+      packing_qty:    item.packing_qty,
+      quantity:       item.quantity,
+      total_qty:      item.total_qty,
+      purchase_price: item.purchase_price,
+      sale_price:     item.sale_price,
+      discount_type:  item.discount_type,
+      discount_value: item.discount_value,
+      tax:            item.tax,
+      price:          item.price,
+    })),
+  )
+  if (itemsErr) return { error: `Failed to save items: ${itemsErr.message}` }
+
+  // 6. Re-create stock batches
+  const { error: stockErr } = await supabase.from('stock_batches').insert(
+    data.items.map(item => ({
+      medicine_id:    item.medicine_id,
+      purchase_id:    purchaseId,
+      batch_no:       item.batch_no,
+      expiry_date:    item.expiry_date,
+      purchase_price: item.purchase_price,
+      sale_price:     item.sale_price,
+      initial_qty:    item.total_qty,
+      sold_qty:       0,
+      available_qty:  item.total_qty,
+      status:         'active' as const,
+      branch_id:      branchId,
+    })),
+  )
+  if (stockErr) return { error: `Failed to update stock: ${stockErr.message}` }
+
+  revalidatePath('/purchases')
+  revalidatePath('/stock')
+  redirect(`/purchases/${purchaseId}`)
+}
+
 // ─── Bulk Import ──────────────────────────────────────────────────────────────
 
 export interface BulkPurchaseRow {

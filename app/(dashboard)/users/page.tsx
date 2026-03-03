@@ -1,9 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { userColumns } from './columns'
 import { PageHeader } from '@/components/ui/page-header'
 import { UserFormDialog } from '@/components/users/user-form-dialog'
-import { AdvancedDataTable } from '@/components/ui/advanced-data-table'
+import { UsersTable } from './users-table'
 
 const SORTABLE_DB_COLUMNS = ['name', 'role', 'created_at']
 
@@ -52,31 +51,27 @@ export default async function UsersPage({
 
   if (params.search) query = query.ilike('name', `%${params.search}%`)
 
-  const { data: users, count } = await query
+  const [{ data: users, count }, { data: branches }] = await Promise.all([
+    query,
+    supabase.from('branches').select('id, name').order('name'),
+  ])
 
   return (
     <div className="space-y-6">
       <div className="bg-white dark:bg-card rounded-2xl border shadow-sm p-5 sm:p-6 space-y-5">
         <PageHeader title="Users" description="Manage staff accounts and roles">
-          <UserFormDialog />
+          <UserFormDialog branches={branches ?? []} />
         </PageHeader>
 
-        <AdvancedDataTable
-          columns={userColumns}
-          data={users ?? []}
+        <UsersTable
+          data={(users ?? []) as any}
+          branches={branches ?? []}
           totalCount={count ?? 0}
           initialPage={page}
           initialPageSize={pageSize}
           initialSearch={params.search ?? ''}
           initialSort={sortCol}
           initialOrder={ascending ? 'asc' : 'desc'}
-          searchPlaceholder="Search users…"
-          emptyMessage="No users found"
-          recordLabel="user"
-          columnLabels={{
-            name: 'Name',
-            role: 'Role',
-          }}
         />
       </div>
     </div>

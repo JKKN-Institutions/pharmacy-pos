@@ -1,23 +1,55 @@
 import { db } from './db'
 
+/** Tracks whether a sync is currently in progress — prevents double sync */
+let syncInProgress = false
+
 export async function syncMedicines(): Promise<boolean> {
+  // Guard against concurrent syncs
+  if (syncInProgress) return false
+  syncInProgress = true
+
   try {
-    const res = await fetch('/api/pos/sync')
+    // Check for last sync timestamp (incremental sync)
+    const meta = await db.sync_meta.get('medicines')
+    const since = meta?.value ?? ''
+    const url = since ? `/api/pos/sync?since=${encodeURIComponent(since)}` : '/api/pos/sync'
+
+    const res = await fetch(url)
     if (!res.ok) return false
 
-    const { medicines, synced_at } = await res.json()
+    const { medicines, deleted_ids, synced_at } = await res.json()
 
-    await db.transaction('rw', db.medicines, async () => {
-      await db.medicines.clear()
-      await db.medicines.bulkAdd(
-        // New sync API already returns `batches` directly (pre-grouped, numeric-coerced)
-        medicines.map((m: any) => ({ ...m, last_synced_at: synced_at }))
-      )
+    await db.transaction('rw', [db.medicines, db.sync_meta], async () => {
+      // Upsert changed medicines (preserves existing data during sync — no clear())
+      if (medicines.length > 0) {
+        await db.medicines.bulkPut(
+          medicines.map((m: any) => ({
+            ...m,
+            name_lower: (m.name ?? '').toLowerCase(),
+            last_synced_at: synced_at,
+          }))
+        )
+      }
+
+      // Remove deactivated medicines
+      if (deleted_ids?.length > 0) {
+        await db.medicines.bulkDelete(deleted_ids)
+      }
+
+      // Update sync checkpoint
+      await db.sync_meta.put({ key: 'medicines', value: synced_at })
     })
+
     return true
   } catch {
     return false
+  } finally {
+    syncInProgress = false
   }
+}
+
+export function isSyncInProgress(): boolean {
+  return syncInProgress
 }
 
 export async function flushOfflineBills(): Promise<void> {

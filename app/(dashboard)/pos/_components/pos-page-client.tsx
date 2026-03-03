@@ -21,8 +21,8 @@ import type { PosBill } from '@/lib/types/database'
 interface PosPageClientProps {
   userId?: string
   branchId?: string
-  bills: PosBill[]
-  totalBills: number
+  initialBills: PosBill[]
+  initialTotalCount: number
   totalRevenue: number
   todayRevenue: number
   pendingCount: number
@@ -62,8 +62,8 @@ const kpiCards = [
 export function PosPageClient({
   userId,
   branchId,
-  bills,
-  totalBills,
+  initialBills,
+  initialTotalCount,
   totalRevenue,
   todayRevenue,
   pendingCount,
@@ -116,7 +116,7 @@ export function PosPageClient({
     revenue: formatINR(totalRevenue),
     today:   formatINR(todayRevenue),
     pending: pendingCount,
-    total:   totalBills,
+    total:   initialTotalCount,
   }
 
   return (
@@ -127,7 +127,7 @@ export function PosPageClient({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">POS/Bill</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            {totalBills} bill{totalBills !== 1 ? 's' : ''} recorded
+            {initialTotalCount.toLocaleString()} bill{initialTotalCount !== 1 ? 's' : ''} recorded
           </p>
         </div>
         {/* Desktop button — hidden on mobile (FAB used instead) */}
@@ -174,7 +174,7 @@ export function PosPageClient({
       </Button>
 
       {/* ── Bills table ───────────────────────────────────────────────────── */}
-      <BillsTable bills={bills} />
+      <BillsTable initialData={initialBills} initialTotalCount={initialTotalCount} />
 
     </div>
   )

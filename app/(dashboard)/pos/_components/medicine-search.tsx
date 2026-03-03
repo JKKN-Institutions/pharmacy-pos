@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
-import { db } from '@/lib/offline/db'
+import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Search, Package, AlertCircle, Loader2, RefreshCw } from 'lucide-react'
 import type { BillItem } from './pos-client'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { syncMedicines } from '@/lib/offline/sync'
+import { useMedicineSearch } from '@/lib/hooks/use-medicine-search'
 
 interface MedicineSearchProps {
   onAddItem: (item: BillItem) => void
@@ -15,71 +15,10 @@ interface MedicineSearchProps {
 }
 
 export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchProps) {
-  const [search, setSearch] = useState('')
-  const [results, setResults] = useState<any[]>([])
-  const [open, setOpen] = useState(false)
-  const [noResults, setNoResults] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const { query, setQuery, results, isSearching, noResults, clear } = useMedicineSearch()
   const [resyncing, setResyncing] = useState(false)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleSearch = useCallback((query: string) => {
-    setSearch(query)
-    setNoResults(false)
-
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-
-    if (query.length < 2) {
-      setResults([])
-      setOpen(false)
-      return
-    }
-
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true)
-      try {
-        let medicines: any[] = []
-
-        if (navigator.onLine) {
-          // ── Online: live search directly from Supabase via API ──────────────
-          const res = await fetch(`/api/pos/search?q=${encodeURIComponent(query)}`)
-          if (res.ok) {
-            const json = await res.json()
-            medicines = json.medicines ?? []
-          } else {
-            // API failed — fall back to IndexedDB
-            medicines = await searchIndexedDB(query)
-          }
-        } else {
-          // ── Offline: search cached IndexedDB ────────────────────────────────
-          medicines = await searchIndexedDB(query)
-        }
-
-        setResults(medicines)
-        setOpen(medicines.length > 0)
-        setNoResults(medicines.length === 0)
-      } catch (err) {
-        console.error('Medicine search error:', err)
-        setResults([])
-        setOpen(false)
-        setNoResults(true)
-      } finally {
-        setLoading(false)
-      }
-    }, 300)
-  }, [])
-
-  async function searchIndexedDB(query: string): Promise<any[]> {
-    const q = query.toLowerCase()
-    return db.medicines
-      .filter(
-        m =>
-          m.name.toLowerCase().includes(q) ||
-          (m.company?.toLowerCase()?.includes(q) ?? false),
-      )
-      .limit(10)
-      .toArray()
-  }
+  const open = results.length > 0 && query.length >= 2
 
   async function handleResync() {
     setResyncing(true)
@@ -87,7 +26,7 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
     setResyncing(false)
     if (ok) {
       toast.success('Medicine catalog synced — try searching again')
-      if (search.length >= 2) handleSearch(search)
+      if (query.length >= 2) setQuery(query) // re-trigger search
     } else {
       toast.error('Sync failed. Check your connection.')
     }
@@ -111,14 +50,11 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
       price: salePrice,
     }
     onAddItem(item)
-    setSearch('')
-    setResults([])
-    setOpen(false)
-    setNoResults(false)
+    clear()
   }
 
   const syncing = isSyncing || resyncing
-  const busy = syncing || loading
+  const busy = syncing || isSearching
 
   return (
     <div className="relative">
@@ -129,8 +65,8 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         )}
         <Input
-          value={search}
-          onChange={e => !syncing && handleSearch(e.target.value)}
+          value={query}
+          onChange={e => !syncing && setQuery(e.target.value)}
           placeholder={
             syncing
               ? 'Syncing medicine catalog, please wait...'
@@ -140,14 +76,9 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
           className="pl-10 h-12 text-sm bg-card border-2 focus-visible:border-primary rounded-xl shadow-sm disabled:opacity-70"
           autoFocus={!syncing}
         />
-        {search && !syncing && (
+        {query && !syncing && (
           <button
-            onClick={() => {
-              setSearch('')
-              setResults([])
-              setOpen(false)
-              setNoResults(false)
-            }}
+            onClick={clear}
             className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors text-sm"
           >
             ✕
@@ -156,7 +87,7 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
       </div>
 
       {/* Dropdown: results — each medicine expands to show all its batches */}
-      {open && results.length > 0 && !syncing && (
+      {open && !syncing && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1.5 bg-popover border border-border rounded-xl shadow-xl overflow-hidden max-h-[60vh] overflow-y-auto">
           <div className="px-3 py-1.5 border-b bg-muted/40 sticky top-0">
             <p className="text-xs text-muted-foreground font-medium">
@@ -238,12 +169,12 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
       )}
 
       {/* No results — offer resync (only relevant in offline mode) */}
-      {noResults && search.length >= 2 && !syncing && !loading && (
+      {noResults && query.length >= 2 && !syncing && !isSearching && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1.5 bg-popover border border-border rounded-xl shadow-xl overflow-hidden">
           <div className="px-4 py-4 flex flex-col items-center gap-2 text-center">
             <AlertCircle className="w-5 h-5 text-muted-foreground opacity-50" />
             <p className="text-sm font-medium text-muted-foreground">
-              No medicines found for &quot;{search}&quot;
+              No medicines found for &quot;{query}&quot;
             </p>
             {!navigator.onLine && (
               <>

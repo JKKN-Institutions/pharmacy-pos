@@ -14,6 +14,7 @@ import {
 import { getBillItemsAction } from './actions'
 import { formatINR } from '@/lib/utils/currency'
 import { DownloadBillButton } from '@/components/pos/download-bill-button'
+import { PrintBillButton } from '@/components/pos/print-bill-button'
 import type { PosBill } from '@/lib/types/database'
 
 type BillItem = {
@@ -29,6 +30,7 @@ const statusStyles: Record<string, string> = {
   saved:      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   synced:     'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   sync_error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  cancelled:  'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 }
 
 const methodStyles: Record<string, string> = {
@@ -119,6 +121,21 @@ export function BillViewDialog({ bill }: BillViewDialogProps) {
             )}
           </div>
 
+          {/* Cancellation info */}
+          {bill.status === 'cancelled' && bill.cancel_reason && (
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/40 p-3 space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">
+                Cancelled
+                {bill.cancelled_at && (
+                  <span className="font-normal normal-case tracking-normal ml-1.5 text-red-500/70 dark:text-red-400/60">
+                    on {format(new Date(bill.cancelled_at), 'dd MMM yyyy, hh:mm a')}
+                  </span>
+                )}
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300">{bill.cancel_reason}</p>
+            </div>
+          )}
+
           {/* Line items */}
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Items</p>
@@ -181,7 +198,8 @@ export function BillViewDialog({ bill }: BillViewDialogProps) {
               <span className="tabular-nums">{formatINR(bill.total)}</span>
             </div>
           </div>
-          <DialogFooter className="pt-2">
+          <DialogFooter className="pt-2 gap-2">
+            <PrintBillButton bill={bill} showLabel variant="outline" />
             <DownloadBillButton bill={bill} showLabel variant="outline" />
           </DialogFooter>
         </DialogContent>

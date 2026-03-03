@@ -47,7 +47,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { createPurchaseAction } from '@/app/(dashboard)/purchases/actions'
+import { createPurchaseAction, updatePurchaseAction } from '@/app/(dashboard)/purchases/actions'
+import type { PurchaseItemInput } from '@/app/(dashboard)/purchases/actions'
 import { calculateLineItem } from '@/lib/utils/billing'
 import { formatINR } from '@/lib/utils/currency'
 
@@ -82,9 +83,31 @@ type FormValues = z.infer<typeof schema>
 
 type MedicineOption = { id: string; name: string; company: string | null; unit: string | null }
 
+export interface PurchaseFormInitialData {
+  id: string
+  supplier_id: string
+  invoice_no: string
+  purchase_date: string
+  items: Array<{
+    medicine_id: string
+    batch_no: string
+    expiry_date: string
+    packing_qty: number
+    quantity: number
+    total_qty: number
+    purchase_price: number
+    sale_price: number
+    discount_type: 'percent' | 'flat'
+    discount_value: number
+    tax: number
+    price: number
+  }>
+}
+
 interface PurchaseFormProps {
   suppliers: { id: string; name: string }[]
   medicines: MedicineOption[]
+  initialData?: PurchaseFormInitialData
 }
 
 // Searchable combobox for medicine selection.
@@ -195,20 +218,44 @@ const defaultItem = {
   item_tax: 0,
 }
 
-export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
+export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseFormProps) {
+  const isEdit = !!initialData
+
   const form = useForm<FormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
-    defaultValues: {
-      supplier_id: '',
-      invoice_no: '',
-      purchase_date: new Date().toISOString().split('T')[0],
-      items: [defaultItem],
-    },
+    defaultValues: initialData
+      ? {
+          supplier_id: initialData.supplier_id,
+          invoice_no: initialData.invoice_no,
+          purchase_date: initialData.purchase_date,
+          items: initialData.items.map(item => ({
+            ...item,
+            item_subtotal: item.total_qty * item.purchase_price,
+            item_discount: 0,
+            item_tax: 0,
+          })),
+        }
+      : {
+          supplier_id: '',
+          invoice_no: '',
+          purchase_date: new Date().toISOString().split('T')[0],
+          items: [defaultItem],
+        },
   })
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'items' })
   const watchedItems = form.watch('items')
+
+  // Recalculate derived fields on mount in edit mode so totals display correctly
+  const didRecalcRef = React.useRef(false)
+  React.useEffect(() => {
+    if (isEdit && !didRecalcRef.current) {
+      didRecalcRef.current = true
+      for (let i = 0; i < fields.length; i++) recalcItem(i)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Summary totals ────────────────────────────────────────────────────────
   // Computed inline (not via useMemo) so they always reflect the current render.
@@ -221,13 +268,16 @@ export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
   const totals = { subtotal, discount_total: discountTotal, tax_total: taxTotal, total: grandTotal }
 
   async function onSubmit(values: FormValues) {
-    const result = await createPurchaseAction({
+    const payload = {
       ...values,
       subtotal: totals.subtotal,
       discount: totals.discount_total,
       tax: totals.tax_total,
       total: totals.total,
-    })
+    }
+    const result = isEdit
+      ? await updatePurchaseAction(initialData.id, payload)
+      : await createPurchaseAction(payload)
     if (result?.error) toast.error(result.error)
   }
 
@@ -268,7 +318,7 @@ export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
                     <div className="flex items-center px-3 bg-muted border-r shrink-0">
                       <Users className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="border-0 rounded-none flex-1 focus:ring-0 shadow-none h-9">
                           <SelectValue placeholder="Select Suppliers" />
@@ -616,7 +666,7 @@ export function PurchaseForm({ suppliers, medicines }: PurchaseFormProps) {
             disabled={form.formState.isSubmitting}
             className="w-full sm:w-auto px-12 bg-green-600 hover:bg-green-700 text-white"
           >
-            {form.formState.isSubmitting ? 'Saving...' : 'Save'}
+            {form.formState.isSubmitting ? 'Saving...' : isEdit ? 'Update Purchase' : 'Save'}
           </Button>
         </div>
 

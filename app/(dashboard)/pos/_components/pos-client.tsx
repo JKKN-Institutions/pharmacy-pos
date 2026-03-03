@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { syncMedicines, flushOfflineBills } from '@/lib/offline/sync'
+import { syncMedicines, flushOfflineBills, isSyncInProgress } from '@/lib/offline/sync'
 import { db } from '@/lib/offline/db'
 import { BillLineItems } from './bill-line-items'
 import { BillTotals } from './bill-totals'
@@ -201,10 +201,12 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
         <Button
           variant="ghost"
           size="sm"
+          disabled={isSyncing}
           onClick={() => {
+            if (isSyncInProgress()) return
             setIsSyncing(true)
             syncMedicines()
-              .then(() => toast.success('Medicine catalog synced'))
+              .then((ok) => ok && toast.success('Medicine catalog synced'))
               .finally(() => setIsSyncing(false))
           }}
           className="h-8 gap-1.5 text-muted-foreground text-xs"

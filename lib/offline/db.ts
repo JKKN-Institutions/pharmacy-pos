@@ -3,6 +3,7 @@ import Dexie, { type EntityTable } from 'dexie'
 interface OfflineMedicine {
   id: string
   name: string
+  name_lower: string
   company: string | null
   tax_percent?: number
   batches: Array<{
@@ -51,18 +52,36 @@ interface OfflineBill {
   synced_bill_no?: string
 }
 
+interface SyncMeta {
+  key: string
+  value: string
+}
+
 class PharmacyDB extends Dexie {
   medicines!: EntityTable<OfflineMedicine, 'id'>
   offline_bills!: EntityTable<OfflineBill, 'id'>
+  sync_meta!: EntityTable<SyncMeta, 'key'>
 
   constructor() {
     super('PharmacyPOS')
+
     this.version(1).stores({
       medicines: 'id, name',
       offline_bills: 'id, sync_status, created_at',
+    })
+
+    this.version(2).stores({
+      medicines: 'id, name, name_lower',
+      offline_bills: 'id, sync_status, created_at',
+      sync_meta: 'key',
+    }).upgrade(tx => {
+      // Populate name_lower for existing records
+      return tx.table('medicines').toCollection().modify((m: any) => {
+        m.name_lower = (m.name ?? '').toLowerCase()
+      })
     })
   }
 }
 
 export const db = new PharmacyDB()
-export type { OfflineMedicine, OfflineBill }
+export type { OfflineMedicine, OfflineBill, SyncMeta }

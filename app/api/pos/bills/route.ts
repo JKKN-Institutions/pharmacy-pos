@@ -93,22 +93,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: itemsError.message }, { status: 500 })
   }
 
-  // Deduct stock from each batch (direct update — no RPC dependency)
+  // Deduct stock atomically — avoids read-then-write race condition.
+  // deduct_batch_stock() runs a single UPDATE in Postgres so concurrent bills
+  // for the same batch cannot both pass and oversell stock.
   for (const item of data.items) {
-    const { data: batch } = await supabase
-      .from('stock_batches')
-      .select('available_qty, sold_qty')
-      .eq('id', item.stock_batch_id)
-      .single()
-    if (batch) {
-      await supabase
-        .from('stock_batches')
-        .update({
-          sold_qty: Number(batch.sold_qty) + Number(item.qty),
-          available_qty: Number(batch.available_qty) - Number(item.qty),
-        })
-        .eq('id', item.stock_batch_id)
-    }
+    await supabase.rpc('deduct_batch_stock', {
+      p_batch_id: item.stock_batch_id,
+      p_qty:      item.qty,
+    })
   }
 
   return NextResponse.json({ bill_no: bill.bill_no, id: bill.id })

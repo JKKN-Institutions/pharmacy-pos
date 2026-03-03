@@ -21,7 +21,6 @@ import {
 import { format } from 'date-fns'
 import type { BillItem } from './pos-client'
 import { db } from '@/lib/offline/db'
-import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 
 interface TaxRate {
@@ -97,15 +96,8 @@ function MedicineCombobox({
     }, 300)
   }, [])
 
-  function handleSelect(medicine: any) {
-    const batches = (medicine.batches ?? [])
-      .filter((b: any) => b.available_qty > 0)
-      .sort((a: any, b: any) => new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime())
-    if (batches.length === 0) {
-      toast.error(`${medicine.name} is out of stock`)
-      return
-    }
-    onSelect(medicine, batches[0])
+  function handleSelectBatch(medicine: any, batch: any) {
+    onSelect(medicine, batch)
     setSearch('')
     setResults([])
     setOpen(false)
@@ -122,27 +114,48 @@ function MedicineCombobox({
               width: dropdownPos.width,
               zIndex: 9999,
             }}
-            className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden"
+            className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden max-h-64 overflow-y-auto"
           >
-            <div className="px-3 py-1.5 border-b bg-muted/40">
-              <p className="text-xs text-muted-foreground font-medium">
-                {results.length} result{results.length !== 1 ? 's' : ''} — click to add
-              </p>
-            </div>
-            <div className="max-h-52 overflow-y-auto">
-              {results.map(m => (
-                <button
-                  key={m.id}
-                  onMouseDown={() => handleSelect(m)}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors border-b border-border/60 last:border-b-0"
-                >
-                  <span className="font-medium">{m.name}</span>
-                  {m.company && (
-                    <span className="text-xs text-muted-foreground ml-2">{m.company}</span>
-                  )}
-                </button>
-              ))}
-            </div>
+            {results.map(m => {
+              const availableBatches = (m.batches ?? [])
+                .filter((b: any) => b.available_qty > 0)
+                .sort((a: any, b: any) =>
+                  new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
+                )
+              const isOutOfStock = availableBatches.length === 0
+
+              return (
+                <div key={m.id} className="border-b border-border/60 last:border-b-0">
+                  {/* Medicine name header */}
+                  <div className="px-3 py-1.5 bg-muted/40 flex items-center justify-between gap-2">
+                    <span className="font-semibold text-xs truncate">{m.name}</span>
+                    {m.company && <span className="text-[10px] text-muted-foreground shrink-0">{m.company}</span>}
+                    {isOutOfStock && <span className="text-[10px] text-destructive shrink-0">Out of stock</span>}
+                  </div>
+
+                  {/* Batch rows */}
+                  {availableBatches.map((batch: any, idx: number) => (
+                    <button
+                      key={batch.id}
+                      onMouseDown={() => handleSelectBatch(m, batch)}
+                      className="w-full text-left px-3 py-1.5 hover:bg-primary/5 transition-colors border-t border-border/30 flex items-center gap-2 text-xs"
+                    >
+                      {idx === 0 ? (
+                        <span className="text-[9px] font-bold bg-green-100 text-green-700 px-1 py-0.5 rounded uppercase shrink-0">FEFO</span>
+                      ) : (
+                        <span className="text-muted-foreground/40 shrink-0 w-8">#{idx + 1}</span>
+                      )}
+                      <span className="font-mono text-[10px] bg-muted px-1 rounded text-muted-foreground shrink-0">{batch.batch_no}</span>
+                      <span className="text-muted-foreground shrink-0">
+                        {new Date(batch.expiry_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                      </span>
+                      <span className="text-muted-foreground shrink-0">Qty:{batch.available_qty}</span>
+                      <span className="ml-auto font-semibold tabular-nums">₹{Number(batch.sale_price).toFixed(2)}</span>
+                    </button>
+                  ))}
+                </div>
+              )
+            })}
           </div>,
           document.body,
         )

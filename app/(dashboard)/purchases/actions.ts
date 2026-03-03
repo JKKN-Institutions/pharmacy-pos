@@ -126,6 +126,20 @@ export interface BulkPurchaseRow {
   raw_row: number
 }
 
+/**
+ * Bulk-imports purchase HEADERS only from a legacy CSV export.
+ *
+ * ⚠️  This action does NOT create `purchase_items` or `stock_batches`.
+ * The source CSV contains only summary totals per purchase — no per-medicine
+ * line items (batch_no, expiry_date, sale_price, qty) are available in the file.
+ *
+ * Consequence: medicines from bulk-imported purchases will NOT appear in POS
+ * search until a proper purchase with line items is created for each medicine.
+ *
+ * Use this action only for migrating historical financial records. For live
+ * stock, create purchases via the manual purchase form which creates
+ * stock_batches immediately.
+ */
 export async function bulkImportPurchasesAction(rows: BulkPurchaseRow[]): Promise<{
   inserted: number
   skipped: number

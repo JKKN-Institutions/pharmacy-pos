@@ -150,18 +150,16 @@ export interface PosBillItem {
   id: string
   bill_id: string
   medicine_id: string
-  medicine_name: string
+  medicine_name: string | null
   stock_batch_id: string
   batch_no: string
   expiry_date: string
-  quantity: number
-  unit_price: number
+  qty: number
+  sale_price: number
   discount_type: 'percent' | 'flat'
   discount_value: number
-  discount_amount: number
-  tax_percent: number
-  tax_amount: number
-  total: number
+  tax: number
+  price: number
 }
 
 // ─── Invoices (credit/institutional) ─────────────────────────────────────────

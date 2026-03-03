@@ -93,29 +93,16 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
     }
   }
 
-  function handleSelect(medicine: any) {
-    const availableBatches = (medicine.batches ?? [])
-      .filter((b: any) => b.available_qty > 0)
-      .sort(
-        (a: any, b: any) =>
-          new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime(),
-      )
-
-    if (availableBatches.length === 0) {
-      toast.error(`${medicine.name} is out of stock`)
-      return
-    }
-
-    const fefo = availableBatches[0]
-    const salePrice = Number(fefo.sale_price)
+  function handleSelectBatch(medicine: any, batch: any) {
+    const salePrice = Number(batch.sale_price)
     const item: BillItem = {
       id: crypto.randomUUID(),
       medicine_id: medicine.id,
       medicine_name: medicine.name,
-      stock_batch_id: fefo.id,
-      batch_no: fefo.batch_no,
-      expiry_date: fefo.expiry_date,
-      available_qty: Number(fefo.available_qty),
+      stock_batch_id: batch.id,
+      batch_no: batch.batch_no,
+      expiry_date: batch.expiry_date,
+      available_qty: Number(batch.available_qty),
       qty: 1,
       sale_price: salePrice,
       discount_type: 'percent',
@@ -123,7 +110,6 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
       tax: Number(medicine.tax_percent ?? 0),
       price: salePrice,
     }
-
     onAddItem(item)
     setSearch('')
     setResults([])
@@ -169,48 +155,83 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
         )}
       </div>
 
-      {/* Dropdown: results */}
+      {/* Dropdown: results — each medicine expands to show all its batches */}
       {open && results.length > 0 && !syncing && (
-        <div className="absolute top-full left-0 right-0 z-50 mt-1.5 bg-popover border border-border rounded-xl shadow-xl overflow-hidden">
-          <div className="px-3 py-1.5 border-b bg-muted/40">
+        <div className="absolute top-full left-0 right-0 z-50 mt-1.5 bg-popover border border-border rounded-xl shadow-xl overflow-hidden max-h-[60vh] overflow-y-auto">
+          <div className="px-3 py-1.5 border-b bg-muted/40 sticky top-0">
             <p className="text-xs text-muted-foreground font-medium">
-              {results.length} result{results.length !== 1 ? 's' : ''} — click to add
+              {results.length} medicine{results.length !== 1 ? 's' : ''} — select a batch to add
             </p>
           </div>
+
           {results.map(medicine => {
-            const batches = medicine.batches ?? []
-            const availableCount = batches.filter((b: any) => b.available_qty > 0).length
-            const isOutOfStock = availableCount === 0
+            const availableBatches = (medicine.batches ?? [])
+              .filter((b: any) => b.available_qty > 0)
+              .sort((a: any, b: any) =>
+                new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
+              )
+            const isOutOfStock = availableBatches.length === 0
 
             return (
-              <button
-                key={medicine.id}
-                onClick={() => handleSelect(medicine)}
-                disabled={isOutOfStock}
-                className="w-full text-left px-4 py-3 hover:bg-muted/60 transition-colors border-b border-border/60 last:border-b-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-start gap-3"
-              >
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                  {isOutOfStock
-                    ? <AlertCircle className="w-4 h-4 text-destructive" />
-                    : <Package className="w-4 h-4 text-primary" />
-                  }
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">{medicine.name}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    {medicine.company ?? 'Unknown company'}
+              <div key={medicine.id} className="border-b border-border/60 last:border-b-0">
+
+                {/* Medicine header — name + company */}
+                <div className="flex items-center gap-3 px-4 py-2 bg-muted/30">
+                  <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                    {isOutOfStock
+                      ? <AlertCircle className="w-3.5 h-3.5 text-destructive" />
+                      : <Package className="w-3.5 h-3.5 text-primary" />
+                    }
                   </div>
-                </div>
-                <div className="shrink-0">
-                  {isOutOfStock ? (
-                    <Badge variant="destructive" className="text-xs">Out of stock</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-xs">
-                      {availableCount} batch{availableCount !== 1 ? 'es' : ''}
-                    </Badge>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{medicine.name}</div>
+                    <div className="text-xs text-muted-foreground">{medicine.company ?? 'Unknown company'}</div>
+                  </div>
+                  {isOutOfStock && (
+                    <Badge variant="destructive" className="text-xs shrink-0">Out of stock</Badge>
                   )}
                 </div>
-              </button>
+
+                {/* Batch rows — one clickable row per available batch */}
+                {isOutOfStock ? null : availableBatches.map((batch: any, idx: number) => (
+                  <button
+                    key={batch.id}
+                    onClick={() => handleSelectBatch(medicine, batch)}
+                    className="w-full text-left px-4 py-2 hover:bg-primary/5 transition-colors border-t border-border/40 flex items-center gap-3"
+                  >
+                    {/* FEFO indicator on the first (nearest-expiry) batch */}
+                    <span className="w-12 shrink-0">
+                      {idx === 0 ? (
+                        <span className="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                          FEFO
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/50 pl-1">#{idx + 1}</span>
+                      )}
+                    </span>
+
+                    {/* Batch number */}
+                    <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded shrink-0 text-muted-foreground">
+                      {batch.batch_no}
+                    </span>
+
+                    {/* Expiry */}
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      Exp: {new Date(batch.expiry_date).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
+                    </span>
+
+                    {/* Available qty */}
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      Qty: <span className="font-medium text-foreground">{batch.available_qty}</span>
+                    </span>
+
+                    {/* Sale price — right-aligned */}
+                    <span className="ml-auto text-sm font-semibold tabular-nums">
+                      ₹{Number(batch.sale_price).toFixed(2)}
+                    </span>
+                  </button>
+                ))}
+              </div>
             )
           })}
         </div>

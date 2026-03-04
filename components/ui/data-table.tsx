@@ -74,7 +74,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="space-y-4">
       {searchKey && (
-        <div className="relative max-w-sm">
+        <div className="relative max-w-sm print:hidden">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder={searchPlaceholder}
@@ -140,7 +140,7 @@ export function DataTable<TData, TValue>({
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-1 print:hidden">
         <p className="text-sm text-muted-foreground">
           {totalRows === 0
             ? 'No records'

@@ -58,10 +58,8 @@ export async function exportReportExcel(options: ExportExcelOptions): Promise<vo
 
   // ── Sheet 2: Summary ───────────────────────────────────────────────────────
   const ss = wb.addWorksheet('Summary')
-  ss.columns = [
-    { header: 'Label', key: 'label', width: 30 },
-    { header: 'Value', key: 'value', width: 24 },
-  ]
+  ss.getColumn(1).width = 30
+  ss.getColumn(2).width = 24
 
   // Title row
   ss.addRow([title])

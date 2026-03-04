@@ -44,14 +44,28 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh session — do not remove this call
-  const { data: { user } } = await supabase.auth.getUser()
+  // Refresh session — do not remove this call.
+  // Wrapped in try-catch because @supabase/ssr throws (rather than returning { error })
+  // when the stored refresh token is invalid or has been invalidated server-side
+  // (e.g. session revoked, JWT secret rotated, user signed in elsewhere).
+  let user = null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (!error) user = data.user
+  } catch {
+    // Stale / invalid session — fall through to the !user redirect below
+  }
 
-  // Redirect unauthenticated users to login
+  // Redirect unauthenticated users to login and clear stale Supabase cookies
+  // so the browser doesn't get stuck in a refresh-token error loop on the next visit.
   if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
+    request.cookies.getAll()
+      .filter(c => c.name.startsWith('sb-'))
+      .forEach(c => redirectResponse.cookies.delete(c.name))
+    return redirectResponse
   }
 
   return supabaseResponse

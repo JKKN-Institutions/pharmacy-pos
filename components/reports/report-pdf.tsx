@@ -194,7 +194,13 @@ export function ReportDocument({
         </View>
 
         {/* Data rows */}
-        {rows.map((row, rowIdx) => (
+        {rows.length === 0 ? (
+          <View style={{ padding: 14 }}>
+            <Text style={{ color: '#888888', fontSize: 9, textAlign: 'center' }}>
+              No data available for the selected period.
+            </Text>
+          </View>
+        ) : rows.map((row, rowIdx) => (
           <View
             key={rowIdx}
             style={[s.tableRow, rowIdx % 2 === 1 ? s.tableRowAlt : {}]}
@@ -215,13 +221,13 @@ export function ReportDocument({
         ))}
 
         {/* Footer with page numbers */}
-        <Text
-          style={s.footer}
-          render={({ pageNumber, totalPages }) =>
-            `${PHARMACY_NAME}  ·  ${title}  ·  Page ${pageNumber} of ${totalPages}`
-          }
-          fixed
-        />
+        <View style={s.footer} fixed>
+          <Text
+            render={({ pageNumber, totalPages }) =>
+              `${PHARMACY_NAME}  ·  ${title}  ·  Page ${pageNumber} of ${totalPages}`
+            }
+          />
+        </View>
       </Page>
     </Document>
   )

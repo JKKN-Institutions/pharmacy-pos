@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 export default async function OutOfStockReportPage() {
   const supabase = await createClient()
@@ -27,9 +28,39 @@ export default async function OutOfStockReportPage() {
     (stockByMedicine[m.id] ?? 0) <= m.reorder_level
   ).map(m => ({ ...m, available: stockByMedicine[m.id] ?? 0 }))
 
+  const outOfStockCount = lowStock.filter(m => m.available === 0).length
+  const lowStockCount = lowStock.filter(m => m.available > 0).length
+  const exportColumns = [
+    { header: 'Medicine',      key: 'name',          width: 32 },
+    { header: 'Company',       key: 'company',       width: 20 },
+    { header: 'Available',     key: 'available',     width: 12, align: 'right' as const },
+    { header: 'Reorder Level', key: 'reorder_level', width: 14, align: 'right' as const },
+    { header: 'Status',        key: 'status',        width: 14 },
+  ]
+  const exportRows = lowStock.map((m) => ({
+    name:          m.name,
+    company:       m.company ?? '—',
+    available:     m.available,
+    reorder_level: m.reorder_level,
+    status:        m.available === 0 ? 'Out of Stock' : 'Low Stock',
+  }))
+  const exportSummary = [
+    { label: 'Out of Stock',    value: String(outOfStockCount) },
+    { label: 'Low Stock',       value: String(lowStockCount) },
+    { label: 'Total Attention', value: String(lowStock.length) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader title="Out of Stock Report" description={`${lowStock.length} medicines at or below reorder level`}>
+        <ExportButtons
+          title="Out of Stock Report"
+          filename={`out-of-stock-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports"><ChevronLeft className="w-4 h-4 mr-1" />Reports</Link>
         </Button>

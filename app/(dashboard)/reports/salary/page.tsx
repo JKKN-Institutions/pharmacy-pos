@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { DataTable } from '@/components/ui/data-table'
-import { ColumnDef } from '@tanstack/react-table'
 import { PageHeader } from '@/components/ui/page-header'
-import { format } from 'date-fns'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
+import { SalaryTable } from './salary-table'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 type SalaryRow = {
   id: string
@@ -17,64 +16,6 @@ type SalaryRow = {
   method: string
   note: string | null
 }
-
-const methodColors: Record<string, string> = {
-  cash: 'bg-green-100 text-green-700 dark:bg-green-900/30',
-  upi: 'bg-green-100 text-green-700 dark:bg-green-900/30',
-  card: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30',
-  bank_transfer: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30',
-  credit: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30',
-}
-
-const columns: ColumnDef<SalaryRow>[] = [
-  {
-    accessorKey: 'date',
-    header: 'Date',
-    cell: ({ row }) => (
-      <div className="text-sm">
-        {format(new Date(row.getValue('date')), 'dd MMM yyyy')}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'staff_name',
-    header: 'Staff Name',
-    cell: ({ row }) => (
-      <div className="font-medium">{row.getValue('staff_name')}</div>
-    ),
-  },
-  {
-    accessorKey: 'amount',
-    header: 'Amount',
-    cell: ({ row }) => (
-      <div className="font-semibold">{formatINR(row.getValue('amount'))}</div>
-    ),
-  },
-  {
-    accessorKey: 'method',
-    header: 'Method',
-    cell: ({ row }) => {
-      const method = row.getValue('method') as string
-      const label = method.replace('_', ' ')
-      return (
-        <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize ${methodColors[method] ?? 'bg-muted text-muted-foreground'}`}
-        >
-          {label}
-        </span>
-      )
-    },
-  },
-  {
-    accessorKey: 'note',
-    header: 'Note',
-    cell: ({ row }) => (
-      <div className="text-sm text-muted-foreground">
-        {row.getValue('note') || '—'}
-      </div>
-    ),
-  },
-]
 
 export default async function SalaryReportPage({
   searchParams,
@@ -106,12 +47,41 @@ export default async function SalaryReportPage({
     return acc
   }, {} as Record<string, number>)
 
+  const exportColumns = [
+    { header: 'Date',       key: 'date',       width: 14 },
+    { header: 'Staff Name', key: 'staff_name', width: 22 },
+    { header: 'Amount (₹)', key: 'amount',     width: 14, align: 'right' as const },
+    { header: 'Method',     key: 'method',     width: 14 },
+    { header: 'Note',       key: 'note',       width: 30 },
+  ]
+  const exportRows = rows.map((r) => ({
+    date:       r.date,
+    staff_name: r.staff_name,
+    amount:     Number(r.amount).toFixed(2),
+    method:     r.method,
+    note:       r.note ?? '—',
+  }))
+  const exportSummary = [
+    { label: 'Total Salary Paid', value: formatINR(totalSalary) },
+    { label: 'Staff Members',     value: String(uniqueStaff) },
+    { label: 'Payment Records',   value: String(count ?? 0) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Salary Report"
         description={`${count ?? 0} salary payment records`}
       >
+        <ExportButtons
+          title="Salary Report"
+          filename={`salary-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+          dateRange={{ from: params.from, to: params.to }}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports">
             <ChevronLeft className="w-4 h-4 mr-1" />
@@ -167,12 +137,7 @@ export default async function SalaryReportPage({
         </Card>
       )}
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        searchKey="staff_name"
-        searchPlaceholder="Search staff name..."
-      />
+      <SalaryTable records={rows} />
     </div>
   )
 }

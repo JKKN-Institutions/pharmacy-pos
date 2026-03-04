@@ -6,6 +6,7 @@ import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 type StockBatchRow = {
   id: string
@@ -37,12 +38,44 @@ export default async function InventoryReportPage() {
   )
   const totalUnits = rows.reduce((s, r) => s + Number(r.available_qty), 0)
 
+  const exportColumns = [
+    { header: 'Medicine',        key: 'medicine_name',   width: 32 },
+    { header: 'Batch No',        key: 'batch_no',        width: 16 },
+    { header: 'Expiry Date',     key: 'expiry_date',     width: 14 },
+    { header: 'Qty',             key: 'available_qty',   width: 10, align: 'right' as const },
+    { header: 'Purchase (₹)',    key: 'purchase_price',  width: 14, align: 'right' as const },
+    { header: 'Selling (₹)',     key: 'sale_price',      width: 14, align: 'right' as const },
+    { header: 'Stock Value (₹)', key: 'stock_value',     width: 16, align: 'right' as const },
+  ]
+  const exportRows = rows.map((r) => ({
+    medicine_name:  r.medicines?.name ?? '—',
+    batch_no:       r.batch_no,
+    expiry_date:    r.expiry_date,
+    available_qty:  Number(r.available_qty),
+    purchase_price: Number(r.purchase_price).toFixed(2),
+    sale_price:     Number(r.sale_price).toFixed(2),
+    stock_value:    (Number(r.available_qty) * Number(r.purchase_price)).toFixed(2),
+  }))
+  const exportSummary = [
+    { label: 'Total Stock Value',  value: formatINR(totalStockValue) },
+    { label: 'Total Units',        value: totalUnits.toLocaleString('en-IN') },
+    { label: 'Active Batches',     value: String(rows.length) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Inventory Report"
         description={`${rows.length} active stock batches`}
       >
+        <ExportButtons
+          title="Inventory Report"
+          filename={`inventory-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports">
             <ChevronLeft className="w-4 h-4 mr-1" />

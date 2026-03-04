@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { DataTable } from '@/components/ui/data-table'
-import { ColumnDef } from '@tanstack/react-table'
 import { PageHeader } from '@/components/ui/page-header'
-import { format } from 'date-fns'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
+import { PurchaseTable } from './purchase-table'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 type PurchaseRow = {
   id: string
@@ -17,63 +16,6 @@ type PurchaseRow = {
   status: string
   suppliers: { name: string } | null
 }
-
-const statusColors: Record<string, string> = {
-  received: 'bg-green-100 text-green-700 dark:bg-green-900/30',
-  returned: 'bg-red-100 text-red-700 dark:bg-red-900/30',
-  partial_return: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30',
-}
-
-const columns: ColumnDef<PurchaseRow>[] = [
-  {
-    accessorKey: 'invoice_no',
-    header: 'Invoice No.',
-    cell: ({ row }) => (
-      <div className="font-mono font-medium">{row.getValue('invoice_no')}</div>
-    ),
-  },
-  {
-    id: 'supplier',
-    header: 'Supplier',
-    cell: ({ row }) => (
-      <div className="text-sm font-medium">{row.original.suppliers?.name ?? '—'}</div>
-    ),
-  },
-  {
-    accessorKey: 'purchase_date',
-    header: 'Date',
-    cell: ({ row }) => (
-      <div className="text-sm">
-        {format(new Date(row.getValue('purchase_date')), 'dd MMM yyyy')}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'total',
-    header: 'Total Cost',
-    cell: ({ row }) => (
-      <div className="font-semibold">{formatINR(row.getValue('total'))}</div>
-    ),
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.getValue('status') as string
-      const label =
-        status === 'partial_return'
-          ? 'Partial Return'
-          : status.charAt(0).toUpperCase() + status.slice(1)
-      return (
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[status] ?? 'bg-muted text-muted-foreground'}`}
-        >
-          {label}
-        </span>
-      )
-    },
-  },
-]
 
 export default async function PurchaseReportPage({
   searchParams,
@@ -97,12 +39,41 @@ export default async function PurchaseReportPage({
   const rows = (purchases ?? []) as unknown as PurchaseRow[]
   const totalCost = rows.reduce((s, r) => s + Number(r.total), 0)
 
+  const exportColumns = [
+    { header: 'Invoice No',  key: 'invoice_no',    width: 16 },
+    { header: 'Date',        key: 'purchase_date', width: 14 },
+    { header: 'Supplier',    key: 'supplier_name', width: 24 },
+    { header: 'Total (₹)',   key: 'total',         width: 14, align: 'right' as const },
+    { header: 'Status',      key: 'status',        width: 14 },
+  ]
+  const exportRows = rows.map((r) => ({
+    invoice_no:    r.invoice_no,
+    purchase_date: r.purchase_date,
+    supplier_name: r.suppliers?.name ?? '—',
+    total:         Number(r.total).toFixed(2),
+    status:        r.status,
+  }))
+  const exportSummary = [
+    { label: 'Total Purchase Cost', value: formatINR(totalCost) },
+    { label: 'Total Purchases',     value: String(count ?? 0) },
+    { label: 'Avg. Purchase Value', value: count ? formatINR(totalCost / count) : formatINR(0) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Purchase Report"
         description={`${count ?? 0} purchases`}
       >
+        <ExportButtons
+          title="Purchase Report"
+          filename={`purchase-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+          dateRange={{ from: params.from, to: params.to }}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports">
             <ChevronLeft className="w-4 h-4 mr-1" />
@@ -141,12 +112,7 @@ export default async function PurchaseReportPage({
         </Card>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        searchKey="invoice_no"
-        searchPlaceholder="Search invoice number..."
-      />
+      <PurchaseTable purchases={rows} />
     </div>
   )
 }

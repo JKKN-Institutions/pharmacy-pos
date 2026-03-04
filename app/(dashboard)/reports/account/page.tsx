@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 type InvoiceRow = {
   id: string
@@ -78,12 +79,44 @@ export default async function AccountReportPage({
   const grandTotalInvoiced = ledger.reduce((s, r) => s + r.total_invoiced, 0)
   const grandTotalPaid = ledger.reduce((s, r) => s + r.total_paid, 0)
   const grandTotalOutstanding = ledger.reduce((s, r) => s + r.total_outstanding, 0)
+
+  const exportColumns = [
+    { header: 'Customer',        key: 'customer_name',     width: 24 },
+    { header: 'Phone',           key: 'customer_phone',    width: 14 },
+    { header: 'Invoices',        key: 'invoice_count',     width: 10, align: 'right' as const },
+    { header: 'Invoiced (₹)',    key: 'total_invoiced',    width: 16, align: 'right' as const },
+    { header: 'Paid (₹)',        key: 'total_paid',        width: 14, align: 'right' as const },
+    { header: 'Outstanding (₹)', key: 'total_outstanding', width: 16, align: 'right' as const },
+  ]
+  const exportRows = ledger.map((r) => ({
+    customer_name:     r.customer_name,
+    customer_phone:    r.customer_phone ?? '—',
+    invoice_count:     r.invoice_count,
+    total_invoiced:    Number(r.total_invoiced).toFixed(2),
+    total_paid:        Number(r.total_paid).toFixed(2),
+    total_outstanding: Number(r.total_outstanding).toFixed(2),
+  }))
+  const exportSummary = [
+    { label: 'Total Invoiced (Unpaid)', value: formatINR(grandTotalInvoiced) },
+    { label: 'Total Collected',         value: formatINR(grandTotalPaid) },
+    { label: 'Total Outstanding',       value: formatINR(grandTotalOutstanding) },
+    { label: 'Customers with Dues',     value: String(ledger.length) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Account Report"
         description={`Customer credit ledger - ${ledger.length} customers with outstanding dues`}
       >
+        <ExportButtons
+          title="Account Report"
+          filename={`account-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports">
             <ChevronLeft className="w-4 h-4 mr-1" />

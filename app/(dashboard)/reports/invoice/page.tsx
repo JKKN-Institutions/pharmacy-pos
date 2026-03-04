@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
-import { DataTable } from '@/components/ui/data-table'
-import { ColumnDef } from '@tanstack/react-table'
 import { PageHeader } from '@/components/ui/page-header'
-import { format } from 'date-fns'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
+import { InvoiceTable } from './invoice-table'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 type InvoiceRow = {
   id: string
@@ -21,95 +20,6 @@ type InvoiceRow = {
   customer_name: string
   customer_phone: string | null
 }
-
-const paymentStatusColors: Record<string, string> = {
-  paid: 'bg-green-100 text-green-700 dark:bg-green-900/30',
-  partial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30',
-  unpaid: 'bg-red-100 text-red-700 dark:bg-red-900/30',
-}
-
-const columns: ColumnDef<InvoiceRow>[] = [
-  {
-    accessorKey: 'invoice_no',
-    header: 'Invoice No.',
-    cell: ({ row }) => (
-      <div className="font-mono font-medium">{row.getValue('invoice_no')}</div>
-    ),
-  },
-  {
-    accessorKey: 'customer_name',
-    header: 'Customer',
-    cell: ({ row }) => (
-      <div>
-        <div className="font-medium text-sm">{row.getValue('customer_name') || '—'}</div>
-        {row.original.customer_phone && (
-          <div className="text-xs text-muted-foreground">{row.original.customer_phone}</div>
-        )}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'invoice_date',
-    header: 'Date',
-    cell: ({ row }) => (
-      <div className="text-sm">
-        {format(new Date(row.getValue('invoice_date')), 'dd MMM yyyy')}
-      </div>
-    ),
-  },
-  {
-    accessorKey: 'due_date',
-    header: 'Due Date',
-    cell: ({ row }) => {
-      const due = row.getValue('due_date') as string | null
-      return (
-        <div className="text-sm">
-          {due ? format(new Date(due), 'dd MMM yyyy') : '—'}
-        </div>
-      )
-    },
-  },
-  {
-    accessorKey: 'total',
-    header: 'Total',
-    cell: ({ row }) => (
-      <div className="font-semibold">{formatINR(row.getValue('total'))}</div>
-    ),
-  },
-  {
-    accessorKey: 'paid',
-    header: 'Paid',
-    cell: ({ row }) => (
-      <div className="text-green-600 font-medium">{formatINR(row.getValue('paid'))}</div>
-    ),
-  },
-  {
-    accessorKey: 'due',
-    header: 'Outstanding',
-    cell: ({ row }) => {
-      const due = row.getValue('due') as number
-      return (
-        <div className={due > 0 ? 'text-red-600 font-medium' : 'text-muted-foreground'}>
-          {formatINR(due)}
-        </div>
-      )
-    },
-  },
-  {
-    accessorKey: 'payment_status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.getValue('payment_status') as string
-      return (
-        <span
-          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${paymentStatusColors[status] ?? 'bg-muted text-muted-foreground'}`}
-        >
-          {status}
-        </span>
-      )
-    },
-  },
-]
 
 export default async function InvoiceReportPage({
   searchParams,
@@ -139,12 +49,50 @@ export default async function InvoiceReportPage({
   const totalCollected = rows.reduce((s, r) => s + Number(r.paid), 0)
   const totalOutstanding = rows.reduce((s, r) => s + Number(r.due), 0)
 
+  const exportColumns = [
+    { header: 'Invoice No',  key: 'invoice_no',     width: 16 },
+    { header: 'Date',        key: 'invoice_date',   width: 14 },
+    { header: 'Due Date',    key: 'due_date',        width: 14 },
+    { header: 'Customer',    key: 'customer_name',  width: 22 },
+    { header: 'Phone',       key: 'customer_phone', width: 14 },
+    { header: 'Total (₹)',   key: 'total',          width: 14, align: 'right' as const },
+    { header: 'Paid (₹)',    key: 'paid',           width: 14, align: 'right' as const },
+    { header: 'Due (₹)',     key: 'due',            width: 14, align: 'right' as const },
+    { header: 'Status',      key: 'payment_status', width: 12 },
+  ]
+  const exportRows = rows.map((r) => ({
+    invoice_no:     r.invoice_no,
+    invoice_date:   r.invoice_date,
+    due_date:       r.due_date ?? '—',
+    customer_name:  r.customer_name,
+    customer_phone: r.customer_phone ?? '—',
+    total:          Number(r.total).toFixed(2),
+    paid:           Number(r.paid).toFixed(2),
+    due:            Number(r.due).toFixed(2),
+    payment_status: r.payment_status,
+  }))
+  const exportSummary = [
+    { label: 'Total Revenue',     value: formatINR(totalRevenue) },
+    { label: 'Total Collected',   value: formatINR(totalCollected) },
+    { label: 'Total Outstanding', value: formatINR(totalOutstanding) },
+    { label: 'Invoice Count',     value: String(count ?? 0) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Invoice Report"
         description={`${count ?? 0} invoices`}
       >
+        <ExportButtons
+          title="Invoice Report"
+          filename={`invoice-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+          dateRange={{ from: params.from, to: params.to }}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports">
             <ChevronLeft className="w-4 h-4 mr-1" />
@@ -181,12 +129,7 @@ export default async function InvoiceReportPage({
         </Card>
       </div>
 
-      <DataTable
-        columns={columns}
-        data={rows}
-        searchKey="invoice_no"
-        searchPlaceholder="Search invoice number..."
-      />
+      <InvoiceTable invoices={rows} />
     </div>
   )
 }

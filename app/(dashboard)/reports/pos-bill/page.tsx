@@ -1,21 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
-import { DataTable } from '@/components/ui/data-table'
-import { ColumnDef } from '@tanstack/react-table'
 import { PageHeader } from '@/components/ui/page-header'
-import { format } from 'date-fns'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
-import type { PosBill } from '@/lib/types/database'
-
-const columns: ColumnDef<PosBill>[] = [
-  { accessorKey: 'bill_no', header: 'Bill No.', cell: ({ row }) => <div className="font-mono font-medium">{row.getValue('bill_no')}</div> },
-  { accessorKey: 'bill_date', header: 'Date', cell: ({ row }) => <div className="text-sm">{format(new Date(row.getValue('bill_date')), 'dd MMM yyyy')}</div> },
-  { accessorKey: 'customer_name', header: 'Customer', cell: ({ row }) => <div className="text-sm">{row.getValue('customer_name') ?? 'Walk-in'}</div> },
-  { accessorKey: 'payment_method', header: 'Method', cell: ({ row }) => <div className="text-sm capitalize">{row.getValue('payment_method')}</div> },
-  { accessorKey: 'total', header: 'Total', cell: ({ row }) => <div className="font-semibold">{formatINR(row.getValue('total'))}</div> },
-]
+import { PosBillTable } from './pos-bill-table'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 export default async function PosBillReportPage({
   searchParams,
@@ -36,14 +26,50 @@ export default async function PosBillReportPage({
   const { data: bills, count } = await query
   const totalRevenue = (bills ?? []).reduce((s, b) => s + Number(b.total), 0)
 
+  const exportColumns = [
+    { header: 'Bill No',       key: 'bill_no',         width: 16 },
+    { header: 'Date',          key: 'bill_date',        width: 14 },
+    { header: 'Customer',      key: 'customer_name',    width: 22 },
+    { header: 'Doctor',        key: 'doctor',           width: 20 },
+    { header: 'Payment',       key: 'payment_method',   width: 14 },
+    { header: 'Subtotal',      key: 'subtotal',         width: 14, align: 'right' as const },
+    { header: 'Discount',      key: 'discount_total',   width: 12, align: 'right' as const },
+    { header: 'Tax',           key: 'tax_total',        width: 10, align: 'right' as const },
+    { header: 'Total (₹)',     key: 'total',            width: 14, align: 'right' as const },
+  ]
+  const exportRows = (bills ?? []).map((b) => ({
+    bill_no:          b.bill_no,
+    bill_date:        b.bill_date,
+    customer_name:    b.customer_name ?? '—',
+    doctor:           b.doctor ?? '—',
+    payment_method:   b.payment_method,
+    subtotal:         Number(b.subtotal).toFixed(2),
+    discount_total:   Number(b.discount_total).toFixed(2),
+    tax_total:        Number(b.tax_total).toFixed(2),
+    total:            Number(b.total).toFixed(2),
+  }))
+  const exportSummary = [
+    { label: 'Total Revenue', value: formatINR(totalRevenue) },
+    { label: 'Bill Count',    value: String(count ?? 0) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader title="POS / Bill Report" description={`${count ?? 0} bills · Total: ${formatINR(totalRevenue)}`}>
+        <ExportButtons
+          title="POS / Bill Report"
+          filename={`pos-bill-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+          dateRange={params}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports"><ChevronLeft className="w-4 h-4 mr-1" />Reports</Link>
         </Button>
       </PageHeader>
-      <DataTable columns={columns} data={bills ?? []} searchKey="bill_no" searchPlaceholder="Search bill number..." />
+      <PosBillTable bills={bills ?? []} />
     </div>
   )
 }

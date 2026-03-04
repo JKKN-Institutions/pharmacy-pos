@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { IncomeExpenseChart, MonthlyData } from './income-expense-chart'
+import { ExportButtons } from '@/components/reports/export-buttons'
 
 function getMonthKey(dateStr: string): string {
   const d = new Date(dateStr)
@@ -95,12 +96,39 @@ export default async function IncomeExpenseReportPage({
   const totalExpenses = chartData.reduce((s, r) => s + r.expenses, 0)
   const totalNet = totalIncome - totalExpenses
 
+  const exportColumns = [
+    { header: 'Month',        key: 'month',    width: 16 },
+    { header: 'Income (₹)',   key: 'income',   width: 16, align: 'right' as const },
+    { header: 'Expenses (₹)', key: 'expenses', width: 16, align: 'right' as const },
+    { header: 'Net (₹)',      key: 'net',      width: 16, align: 'right' as const },
+  ]
+  const exportRows = chartData.map((r) => ({
+    month:    r.month,
+    income:   Number(r.income).toFixed(2),
+    expenses: Number(r.expenses).toFixed(2),
+    net:      Number(r.net).toFixed(2),
+  }))
+  const exportSummary = [
+    { label: 'Total Income',      value: formatINR(totalIncome) },
+    { label: 'Total Expenses',    value: formatINR(totalExpenses) },
+    { label: 'Net Profit / Loss', value: formatINR(totalNet) },
+  ]
+  const today = new Date().toISOString().slice(0, 10)
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Income & Expense Report"
         description="Monthly profit and loss summary"
       >
+        <ExportButtons
+          title="Income & Expense Report"
+          filename={`income-expense-${today}`}
+          columns={exportColumns}
+          rows={exportRows}
+          summaryItems={exportSummary}
+          dateRange={{ from: params.from, to: params.to }}
+        />
         <Button variant="outline" size="sm" asChild>
           <Link href="/reports">
             <ChevronLeft className="w-4 h-4 mr-1" />

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Printer, FileDown, Sheet } from 'lucide-react'
+import { Printer, FileDown, Sheet, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
 import type { ReportColumn } from '@/lib/utils/export-report-excel'
 
 interface ExportButtonsProps {
@@ -31,6 +32,7 @@ export function ExportButtons({
 
   async function handlePdf() {
     setPdfLoading(true)
+    let objectUrl: string | null = null
     try {
       const [{ pdf }, { ReportDocument }] = await Promise.all([
         import('@react-pdf/renderer'),
@@ -45,15 +47,17 @@ export function ExportButtons({
           dateRange={dateRange}
         />
       ).toBlob()
-      const url = URL.createObjectURL(blob)
+      objectUrl = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
-      anchor.href = url
+      anchor.href = objectUrl
       anchor.download = `${filename}.pdf`
       document.body.appendChild(anchor)
       anchor.click()
       document.body.removeChild(anchor)
-      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('Failed to generate PDF. Please try again.')
     } finally {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
       setPdfLoading(false)
     }
   }
@@ -63,6 +67,8 @@ export function ExportButtons({
     try {
       const { exportReportExcel } = await import('@/lib/utils/export-report-excel')
       await exportReportExcel({ title, filename, columns, rows, summaryItems })
+    } catch {
+      toast.error('Failed to export Excel. Please try again.')
     } finally {
       setXlsxLoading(false)
     }
@@ -86,7 +92,9 @@ export function ExportButtons({
         disabled={pdfLoading}
         title="Download PDF"
       >
-        <FileDown className="w-4 h-4" />
+        {pdfLoading
+          ? <Loader2 className="w-4 h-4 animate-spin" />
+          : <FileDown className="w-4 h-4" />}
         <span className="hidden sm:inline ml-1">{pdfLoading ? 'Generating…' : 'PDF'}</span>
       </Button>
       <Button
@@ -96,7 +104,9 @@ export function ExportButtons({
         disabled={xlsxLoading}
         title="Export Excel"
       >
-        <Sheet className="w-4 h-4" />
+        {xlsxLoading
+          ? <Loader2 className="w-4 h-4 animate-spin" />
+          : <Sheet className="w-4 h-4" />}
         <span className="hidden sm:inline ml-1">{xlsxLoading ? 'Exporting…' : 'Excel'}</span>
       </Button>
     </div>

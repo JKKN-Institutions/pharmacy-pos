@@ -227,6 +227,8 @@ export async function updatePurchaseAction(
   if (stockErr) return { error: `Failed to update stock: ${stockErr.message}` }
 
   revalidatePath('/purchases')
+  revalidatePath(`/purchases/${purchaseId}`)
+  revalidatePath(`/purchases/${purchaseId}/edit`)
   revalidatePath('/stock')
   redirect(`/purchases/${purchaseId}`)
 }

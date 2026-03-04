@@ -15,12 +15,12 @@ export default async function EditPurchasePage({
   const { id } = await params
   const supabase = await createClient()
 
-  // Parallel fetch: purchase header + items + suppliers + medicines
+  // Parallel fetch: purchase header + items + suppliers + active medicines
   const [
     { data: purchase },
     { data: items },
     { data: suppliers },
-    { data: medicines },
+    { data: activeMedicines },
   ] = await Promise.all([
     supabase
       .from('purchases')
@@ -33,10 +33,30 @@ export default async function EditPurchasePage({
       .eq('purchase_id', id)
       .order('id'),
     supabase.from('suppliers').select('id, name').order('name'),
-    supabase.from('medicines').select('id, name, company, unit').eq('status', 'active').order('name'),
+    supabase.from('medicines').select('id, name, company, unit, tax_percent').eq('status', 'active').order('name'),
   ])
 
   if (!purchase) notFound()
+
+  // Medicines in a purchase may become inactive after the purchase was created.
+  // If we only send active medicines to the form, those inactive medicine IDs
+  // won't be found by the combobox and it will show "Select medicine" instead
+  // of the actual name. So we merge any missing ones in (regardless of status).
+  let medicines = activeMedicines ?? []
+  if (items && items.length > 0) {
+    const activeIds = new Set(medicines.map((m) => m.id))
+    const missingIds = items
+      .map((i) => i.medicine_id)
+      .filter((mid): mid is string => !!mid && !activeIds.has(mid))
+
+    if (missingIds.length > 0) {
+      const { data: inactiveMeds } = await supabase
+        .from('medicines')
+        .select('id, name, company, unit, tax_percent')
+        .in('id', missingIds)
+      if (inactiveMeds) medicines = [...medicines, ...inactiveMeds]
+    }
+  }
 
   // Check if any stock batches from this purchase have been sold
   const { data: soldBatches } = await supabase
@@ -95,7 +115,7 @@ export default async function EditPurchasePage({
       ) : (
         <PurchaseForm
           suppliers={suppliers ?? []}
-          medicines={medicines ?? []}
+          medicines={medicines}
           initialData={initialData}
         />
       )}

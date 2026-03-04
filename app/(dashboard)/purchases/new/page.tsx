@@ -10,7 +10,7 @@ export default async function NewPurchasePage() {
 
   const [{ data: suppliers }, { data: medicines }] = await Promise.all([
     supabase.from('suppliers').select('id, name').order('name'),
-    supabase.from('medicines').select('id, name, company, unit').eq('status', 'active').order('name'),
+    supabase.from('medicines').select('id, name, company, unit, tax_percent').eq('status', 'active').order('name'),
   ])
 
   return (

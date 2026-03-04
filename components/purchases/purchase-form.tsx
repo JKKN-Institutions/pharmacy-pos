@@ -81,7 +81,7 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-type MedicineOption = { id: string; name: string; company: string | null; unit: string | null }
+type MedicineOption = { id: string; name: string; company: string | null; unit: string | null; tax_percent: number | null }
 
 export interface PurchaseFormInitialData {
   id: string
@@ -120,7 +120,7 @@ function MedicineCombobox({
 }: {
   medicines: MedicineOption[]
   value: string
-  onValueChange: (id: string) => void
+  onValueChange: (id: string, taxPercent: number) => void
 }) {
   const [open, setOpen]     = React.useState(false)
   const [query, setQuery]   = useState('')
@@ -173,7 +173,7 @@ function MedicineCombobox({
                   key={m.id}
                   value={m.id}
                   onSelect={() => {
-                    onValueChange(m.id)
+                    onValueChange(m.id, m.tax_percent ?? 0)
                     setOpen(false)
                     setQuery('')
                   }}
@@ -184,12 +184,7 @@ function MedicineCombobox({
                       value === m.id ? 'opacity-100' : 'opacity-0',
                     )}
                   />
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-sm truncate">{m.name}</span>
-                    {m.company && (
-                      <span className="text-xs text-muted-foreground truncate">{m.company}</span>
-                    )}
-                  </div>
+                  <span className="text-sm truncate">{m.name}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -229,12 +224,21 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
           supplier_id: initialData.supplier_id,
           invoice_no: initialData.invoice_no,
           purchase_date: initialData.purchase_date,
-          items: initialData.items.map(item => ({
-            ...item,
-            item_subtotal: item.total_qty * item.purchase_price,
-            item_discount: 0,
-            item_tax: 0,
-          })),
+          items: initialData.items.map(item => {
+            const line = calculateLineItem({
+              qty: item.quantity,
+              unit_price: item.purchase_price,
+              discount_type: item.discount_type,
+              discount_value: item.discount_value,
+              tax: item.tax,
+            })
+            return {
+              ...item,
+              item_subtotal: line.subtotal,
+              item_discount: line.discount,
+              item_tax: line.tax_amount,
+            }
+          }),
         }
       : {
           supplier_id: '',
@@ -246,16 +250,6 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
 
   const { fields, append, remove } = useFieldArray({ control: form.control, name: 'items' })
   const watchedItems = form.watch('items')
-
-  // Recalculate derived fields on mount in edit mode so totals display correctly
-  const didRecalcRef = React.useRef(false)
-  React.useEffect(() => {
-    if (isEdit && !didRecalcRef.current) {
-      didRecalcRef.current = true
-      for (let i = 0; i < fields.length; i++) recalcItem(i)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // ── Summary totals ────────────────────────────────────────────────────────
   // Computed inline (not via useMemo) so they always reflect the current render.
@@ -287,7 +281,7 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
     const item = form.getValues(`items.${index}`)
     const totalQty = (Number(item.packing_qty) || 1) * (Number(item.quantity) || 0)
     const line = calculateLineItem({
-      qty: totalQty,
+      qty: Number(item.quantity) || 0,
       unit_price: Number(item.purchase_price) || 0,
       discount_type: item.discount_type,
       discount_value: Number(item.discount_value) || 0,
@@ -386,7 +380,7 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="min-w-[180px] text-xs font-semibold">Name *</TableHead>
+                    <TableHead className="min-w-[260px] text-xs font-semibold">Name *</TableHead>
                     <TableHead className="min-w-[110px] text-xs font-semibold">Batch No *</TableHead>
                     <TableHead className="min-w-[130px] text-xs font-semibold">Expiry Date *</TableHead>
                     <TableHead className="min-w-[80px] text-xs font-semibold">Packing Qty</TableHead>
@@ -412,7 +406,11 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
                               <MedicineCombobox
                                 medicines={medicines}
                                 value={field.value}
-                                onValueChange={field.onChange}
+                                onValueChange={(id, taxPercent) => {
+                                  field.onChange(id)
+                                  form.setValue(`items.${index}.tax`, taxPercent, { shouldDirty: true })
+                                  recalcItem(index)
+                                }}
                               />
                             </FormControl>
                             <FormMessage />

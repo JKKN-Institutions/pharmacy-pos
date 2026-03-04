@@ -14,6 +14,11 @@ function CollapsibleTrigger({
   return (
     <CollapsiblePrimitive.CollapsibleTrigger
       data-slot="collapsible-trigger"
+      // Radix's @radix-ui/react-id uses useState(React.useId()) which generates
+      // different ID formats between SSR (counter-based) and client hydration
+      // (tree-based). The aria-controls attribute always renders in HTML,
+      // so we suppress the mismatch warning here.
+      suppressHydrationWarning
       {...props}
     />
   )
@@ -25,6 +30,9 @@ function CollapsibleContent({
   return (
     <CollapsiblePrimitive.CollapsibleContent
       data-slot="collapsible-content"
+      // Same Radix useId() SSR/hydration format mismatch — id attribute on the
+      // content div needs suppression.
+      suppressHydrationWarning
       {...props}
     />
   )

@@ -26,6 +26,11 @@ function DropdownMenuTrigger({
   return (
     <DropdownMenuPrimitive.Trigger
       data-slot="dropdown-menu-trigger"
+      // Radix's @radix-ui/react-id generates id={triggerId} on this element,
+      // which differs between SSR (counter-based _r_) and client hydration
+      // (tree-based _R_). Suppress the warning since both formats are stable
+      // after the first render.
+      suppressHydrationWarning
       {...props}
     />
   )

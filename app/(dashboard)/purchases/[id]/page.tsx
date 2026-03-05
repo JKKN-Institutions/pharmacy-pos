@@ -88,7 +88,13 @@ export default async function PurchaseDetailPage({
       </div>
 
       {/* ── Items table (TanStack Table client component) ───────────────────── */}
-      <PurchaseItemsTable items={(items ?? []) as PurchaseItem[]} />
+      <PurchaseItemsTable
+        items={(items ?? []) as PurchaseItem[]}
+        subtotal={Number(purchase.subtotal ?? 0)}
+        tax={Number(purchase.tax ?? 0)}
+        discount={Number(purchase.discount ?? 0)}
+        total={Number(purchase.total ?? 0)}
+      />
 
     </div>
   )

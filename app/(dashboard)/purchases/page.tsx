@@ -37,9 +37,16 @@ export default async function PurchasesPage({
   const ascending = params.order === 'asc'
 
   // ── Query ──────────────────────────────────────────────────────────────────
+  // Use !inner join when searching so the supplier name filter actually
+  // excludes non-matching parent rows (PostgREST LEFT JOIN only filters
+  // embedded rows, not parent rows — !inner makes it an INNER JOIN).
+  const selectCols = params.search
+    ? '*, suppliers!inner(name)'
+    : '*, suppliers(name)'
+
   let query = supabase
     .from('purchases')
-    .select('*, suppliers(name)', { count: 'exact' })
+    .select(selectCols, { count: 'exact' })
     .order(sortCol, { ascending })
     .range(rangeFrom, rangeTo)
 

@@ -79,12 +79,13 @@ export function useMedicineSearch() {
           })
       })
       .then(localMedicines => {
+        const today = new Date().toISOString().split('T')[0]
         const mapped = localMedicines.map(m => ({
           id: m.id,
           name: m.name,
           company: m.company ?? null,
           tax_percent: Number(m.tax_percent ?? 0),
-          batches: (m.batches ?? []).filter(b => b.available_qty > 0),
+          batches: (m.batches ?? []).filter(b => b.available_qty > 0 && b.expiry_date >= today),
         }))
 
         // Show local results immediately

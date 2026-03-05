@@ -96,8 +96,9 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
           </div>
 
           {results.map(medicine => {
+            const today = new Date().toISOString().split('T')[0]
             const availableBatches = (medicine.batches ?? [])
-              .filter((b: any) => b.available_qty > 0)
+              .filter((b: any) => b.available_qty > 0 && b.expiry_date >= today)
               .sort((a: any, b: any) =>
                 new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
               )

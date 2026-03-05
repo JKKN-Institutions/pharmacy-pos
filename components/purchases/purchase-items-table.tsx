@@ -31,8 +31,8 @@ export type PurchaseItem = {
   total_qty:      number | null
   purchase_price: number | null
   sale_price:     number | null
-  item_discount:  number | null
-  item_tax:       number | null
+  discount_value: number | null
+  tax:            number | null
   price:          number | null
   medicines:      { name: string } | null
 }
@@ -45,7 +45,7 @@ const TD = 'py-3 px-4 first:pl-6 last:pr-6'
 // Columns that display right-aligned numeric values
 const RIGHT_COLS = new Set([
   'packing_qty', 'quantity', 'purchase_price',
-  'sale_price', 'item_discount', 'item_tax', 'price',
+  'sale_price', 'discount_value', 'tax', 'price',
 ])
 
 // ─── Column definitions ────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ const columns: ColumnDef<PurchaseItem>[] = [
   {
     id: 'quantity',
     header: 'Quantity',
-    accessorFn: (row) => row.quantity ?? row.total_qty,
+    accessorFn: (row) => row.total_qty ?? row.quantity,
     cell: ({ getValue }) => (
       <span className="text-sm tabular-nums font-medium">
         {(getValue() as number | null) ?? '—'}
@@ -126,7 +126,7 @@ const columns: ColumnDef<PurchaseItem>[] = [
     ),
   },
   {
-    accessorKey: 'item_discount',
+    accessorKey: 'discount_value',
     header: 'Discount',
     cell: ({ getValue }) => (
       <span className="text-sm tabular-nums text-muted-foreground">
@@ -135,7 +135,7 @@ const columns: ColumnDef<PurchaseItem>[] = [
     ),
   },
   {
-    accessorKey: 'item_tax',
+    accessorKey: 'tax',
     header: 'Tax',
     cell: ({ getValue }) => (
       <span className="text-sm tabular-nums text-muted-foreground">
@@ -158,16 +158,24 @@ const columns: ColumnDef<PurchaseItem>[] = [
 
 interface Props {
   items: PurchaseItem[]
+  subtotal?: number
+  tax?: number
+  discount?: number
+  total?: number
 }
 
-export function PurchaseItemsTable({ items }: Props) {
+export function PurchaseItemsTable({ items, subtotal, tax, discount, total }: Props) {
   const table = useReactTable({
     data:            items,
     columns,
     getCoreRowModel: getCoreRowModel(),
   })
 
-  const grandTotal = items.reduce((sum, i) => sum + (i.price ?? 0), 0)
+  // Use header totals if provided, else compute from line items
+  const displaySubtotal = subtotal ?? items.reduce((sum, i) => sum + (i.price ?? 0), 0)
+  const displayTax      = tax ?? items.reduce((sum, i) => sum + (i.tax ?? 0), 0)
+  const displayDiscount = discount ?? 0
+  const displayTotal    = total ?? (displaySubtotal + displayTax - displayDiscount)
   const rows       = table.getRowModel().rows
 
   return (
@@ -244,16 +252,30 @@ export function PurchaseItemsTable({ items }: Props) {
             </Table>
           </div>
 
-          {/* ── Grand total footer ──────────────────────────────────────────── */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/30">
-            <span className="text-xs text-muted-foreground">
-              {items.length} item{items.length !== 1 ? 's' : ''}
-            </span>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">Grand Total</span>
-              <span className="text-base font-bold tabular-nums">
-                {formatINR(grandTotal)}
+          {/* ── Totals footer ────────────────────────────────────────────────── */}
+          <div className="border-t border-border bg-muted/30 px-6 py-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs text-muted-foreground pt-1">
+                {items.length} item{items.length !== 1 ? 's' : ''}
               </span>
+              <div className="space-y-1.5 text-sm text-right">
+                <div className="flex items-center justify-end gap-6">
+                  <span className="text-muted-foreground">Sub Total</span>
+                  <span className="tabular-nums w-28 text-right">{formatINR(displaySubtotal)}</span>
+                </div>
+                <div className="flex items-center justify-end gap-6">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="tabular-nums w-28 text-right">{formatINR(displayTax)}</span>
+                </div>
+                <div className="flex items-center justify-end gap-6">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="tabular-nums w-28 text-right">{formatINR(displayDiscount)}</span>
+                </div>
+                <div className="flex items-center justify-end gap-6 pt-1.5 border-t border-border">
+                  <span className="font-semibold">Amount</span>
+                  <span className="font-bold tabular-nums text-base w-28 text-right">{formatINR(displayTotal)}</span>
+                </div>
+              </div>
             </div>
           </div>
         </>

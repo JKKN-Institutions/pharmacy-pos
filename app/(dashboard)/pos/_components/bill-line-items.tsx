@@ -90,8 +90,9 @@ function MedicineCombobox({
             className="bg-popover border border-border rounded-lg shadow-xl overflow-hidden max-h-64 overflow-y-auto"
           >
             {results.map(m => {
+              const today = new Date().toISOString().split('T')[0]
               const availableBatches = (m.batches ?? [])
-                .filter((b: any) => b.available_qty > 0)
+                .filter((b: any) => b.available_qty > 0 && b.expiry_date >= today)
                 .sort((a: any, b: any) =>
                   new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime()
                 )

@@ -63,7 +63,7 @@ export default async function StockPage({
       .select('*, medicines(name, company)', { count: 'exact' })
 
     if (view === 'live') {
-      q = q.eq('status', 'active').gte('expiry_date', today)
+      q = q.eq('status', 'active').gte('expiry_date', today).gt('available_qty', 0)
     } else {
       q = q.or(`status.eq.expired,expiry_date.lt.${today}`)
     }

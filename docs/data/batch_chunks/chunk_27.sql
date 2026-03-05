@@ -1,2 +1,0 @@
-INSERT INTO _staging_batches (old_id, name, batch_no, expiry, packing_qty, qty, sale_price, purchase_price, discount_type, discount_value, tax_price, price, sold, old_medicine_id, old_purchase_id, old_status, created_at) VALUES
-  (13100, 'ATORVAST10&amp;

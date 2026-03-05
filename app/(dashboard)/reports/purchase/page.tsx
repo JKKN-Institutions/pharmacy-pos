@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { PurchaseTable } from './purchase-table'
 import { ExportButtons } from '@/components/reports/export-buttons'
+import { ReportDateFilter } from '@/components/reports/report-date-filter'
 
 type PurchaseRow = {
   id: string
@@ -66,6 +67,7 @@ export default async function PurchaseReportPage({
         title="Purchase Report"
         description={`${count ?? 0} purchases`}
       >
+        <ReportDateFilter />
         <ExportButtons
           title="Purchase Report"
           filename={`purchase-${today}`}

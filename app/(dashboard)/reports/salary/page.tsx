@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { SalaryTable } from './salary-table'
 import { ExportButtons } from '@/components/reports/export-buttons'
+import { ReportDateFilter } from '@/components/reports/report-date-filter'
 
 type SalaryRow = {
   id: string
@@ -74,6 +75,7 @@ export default async function SalaryReportPage({
         title="Salary Report"
         description={`${count ?? 0} salary payment records`}
       >
+        <ReportDateFilter />
         <ExportButtons
           title="Salary Report"
           filename={`salary-${today}`}

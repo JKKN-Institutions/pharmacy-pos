@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { IncomeExpenseChart, MonthlyData } from './income-expense-chart'
 import { ExportButtons } from '@/components/reports/export-buttons'
+import { ReportDateFilter } from '@/components/reports/report-date-filter'
 
 function getMonthKey(dateStr: string): string {
   const d = new Date(dateStr)
@@ -121,6 +122,7 @@ export default async function IncomeExpenseReportPage({
         title="Income & Expense Report"
         description="Monthly profit and loss summary"
       >
+        <ReportDateFilter />
         <ExportButtons
           title="Income & Expense Report"
           filename={`income-expense-${today}`}

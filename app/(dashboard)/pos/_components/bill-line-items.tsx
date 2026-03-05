@@ -260,14 +260,15 @@ export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: B
                     <Input
                       type="number"
                       value={item.qty}
-                      min={1}
-                      max={item.available_qty}
                       onChange={(e) =>
                         onUpdate(item.id, {
-                          qty: Math.min(parseInt(e.target.value) || 1, item.available_qty),
+                          qty: parseInt(e.target.value) || 0,
                         })
                       }
-                      className="h-7 w-16 text-center px-1 font-medium"
+                      className={cn(
+                        "h-7 w-16 text-center px-1 font-medium",
+                        item.qty > item.available_qty && "border-destructive text-destructive"
+                      )}
                     />
                     <span className="text-xs text-muted-foreground tabular-nums">
                       | {item.available_qty}
@@ -275,9 +276,22 @@ export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: B
                   </div>
                 </td>
 
-                {/* Sale Price — readonly */}
-                <td className="px-3 py-2 text-right text-sm tabular-nums text-muted-foreground">
-                  {item.sale_price.toFixed(2)}
+                {/* Sale Price — editable */}
+                <td className="px-3 py-2">
+                  <div className="flex justify-end">
+                    <Input
+                      type="number"
+                      value={item.sale_price}
+                      min={0}
+                      step="0.01"
+                      onChange={(e) =>
+                        onUpdate(item.id, {
+                          sale_price: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="h-7 w-24 text-right px-2 font-medium tabular-nums"
+                    />
+                  </div>
                 </td>
 
                 {/* Discount — type Select + value Input inline */}

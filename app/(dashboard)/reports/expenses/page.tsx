@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import Link from 'next/link'
 import { ExpensesTable } from './expenses-table'
 import { ExportButtons } from '@/components/reports/export-buttons'
+import { ReportDateFilter } from '@/components/reports/report-date-filter'
 
 type ExpenseRow = {
   id: string
@@ -75,6 +76,7 @@ export default async function ExpensesReportPage({
         title="Expenses Report"
         description={`${count ?? 0} expense records`}
       >
+        <ReportDateFilter />
         <ExportButtons
           title="Expenses Report"
           filename={`expenses-${today}`}

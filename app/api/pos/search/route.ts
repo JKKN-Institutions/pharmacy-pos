@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function searchFTS(supabase: any, query: string) {
+  const today = new Date().toISOString().split('T')[0]
   // Single embedded-join query using textSearch() — hits the GIN index
   const { data, error } = await supabase
     .from('medicines')
@@ -31,6 +32,8 @@ async function searchFTS(supabase: any, query: string) {
     `)
     .eq('status', 'active')
     .textSearch('name', query, { type: 'websearch' })
+    .eq('stock_batches.status', 'active')
+    .gte('stock_batches.expiry_date', today)
     .gt('stock_batches.available_qty', 0)
     .order('name')
     .limit(20)
@@ -44,6 +47,7 @@ async function searchFTS(supabase: any, query: string) {
 }
 
 async function searchIlike(supabase: any, query: string) {
+  const today = new Date().toISOString().split('T')[0]
   // Fallback: ilike with embedded join — handles substring matches
   const { data, error } = await supabase
     .from('medicines')
@@ -53,6 +57,8 @@ async function searchIlike(supabase: any, query: string) {
     `)
     .eq('status', 'active')
     .or(`name.ilike.%${query}%,company.ilike.%${query}%`)
+    .eq('stock_batches.status', 'active')
+    .gte('stock_batches.expiry_date', today)
     .gt('stock_batches.available_qty', 0)
     .order('name')
     .limit(20)

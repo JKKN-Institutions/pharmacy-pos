@@ -40,6 +40,43 @@ export async function writeOffStockAction(batchId: string, reason: string) {
   return { success: true }
 }
 
+// ─── Update Stock Batch ───────────────────────────────────────────────────────
+
+export async function updateStockBatchAction(
+  batchId: string,
+  data: { available_qty: number; sale_price: number },
+) {
+  const supabase = await createClient()
+
+  const { data: batch, error: fetchError } = await supabase
+    .from('stock_batches')
+    .select('initial_qty')
+    .eq('id', batchId)
+    .single()
+
+  if (fetchError || !batch) return { error: 'Batch not found' }
+
+  if (data.available_qty < 0) return { error: 'Available qty cannot be negative' }
+  if (data.sale_price < 0) return { error: 'Sale price cannot be negative' }
+
+  const newSoldQty = batch.initial_qty - data.available_qty
+  if (newSoldQty < 0) return { error: 'Available qty cannot exceed initial qty' }
+
+  const { error: updateError } = await supabase
+    .from('stock_batches')
+    .update({
+      available_qty: data.available_qty,
+      sold_qty: newSoldQty,
+      sale_price: data.sale_price,
+    })
+    .eq('id', batchId)
+
+  if (updateError) return { error: updateError.message }
+
+  revalidatePath('/stock')
+  return { success: true }
+}
+
 // ─── Bulk Import — Step 1: Prepare payloads ───────────────────────────────────
 
 /**

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { InvoiceTable } from './invoice-table'
 import { ExportButtons } from '@/components/reports/export-buttons'
+import { ReportDateFilter } from '@/components/reports/report-date-filter'
 
 type InvoiceRow = {
   id: string
@@ -85,6 +86,7 @@ export default async function InvoiceReportPage({
         title="Invoice Report"
         description={`${count ?? 0} invoices`}
       >
+        <ReportDateFilter />
         <ExportButtons
           title="Invoice Report"
           filename={`invoice-${today}`}

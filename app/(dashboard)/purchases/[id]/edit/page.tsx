@@ -98,27 +98,23 @@ export default async function EditPurchasePage({
         </Button>
       </PageHeader>
 
-      {hasSoldStock ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/40 p-6 space-y-2">
-          <p className="font-semibold text-amber-800 dark:text-amber-300">
-            This purchase cannot be edited
+      {hasSoldStock && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900/40 p-4 space-y-1">
+          <p className="font-semibold text-sm text-amber-800 dark:text-amber-300">
+            Some batches have been sold
           </p>
-          <p className="text-sm text-amber-700 dark:text-amber-400">
-            Some stock batches from this purchase have already been sold through POS.
-            Editing would break stock integrity. Cancel the related POS bills first if
-            you need to make changes.
-          </p>
-          <p className="text-xs text-amber-600 dark:text-amber-500 font-mono">
-            Sold batches: {soldBatches.map(b => b.batch_no).join(', ')}
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            Batches with sales: {soldBatches.map(b => b.batch_no).join(', ')}.
+            Editing quantities for sold batches may affect stock integrity.
           </p>
         </div>
-      ) : (
-        <PurchaseForm
-          suppliers={suppliers ?? []}
-          medicines={medicines}
-          initialData={initialData}
-        />
       )}
+
+      <PurchaseForm
+        suppliers={suppliers ?? []}
+        medicines={medicines}
+        initialData={initialData}
+      />
     </div>
   )
 }

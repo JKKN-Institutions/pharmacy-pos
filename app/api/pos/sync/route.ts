@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
 }
 
 async function fullSync(supabase: any, synced_at: string) {
+  const today = new Date().toISOString().split('T')[0]
   const { data, error } = await supabase
     .from('medicines')
     .select(`
@@ -25,6 +26,9 @@ async function fullSync(supabase: any, synced_at: string) {
       )
     `)
     .eq('status', 'active')
+    .eq('stock_batches.status', 'active')
+    .gte('stock_batches.expiry_date', today)
+    .gt('stock_batches.available_qty', 0)
     .order('name')
 
   if (error) {
@@ -122,13 +126,18 @@ async function incrementalSync(supabase: any, since: string, synced_at: string) 
 }
 
 function formatMedicines(data: any[] | null) {
+  const today = new Date().toISOString().split('T')[0]
   return (data ?? []).map((m: any) => ({
     id: m.id,
     name: m.name,
     company: m.company ?? null,
     tax_percent: Number(m.tax_percent ?? 0),
     batches: ((m.stock_batches ?? []) as any[])
-      .filter((b) => Number(b.available_qty) > 0)
+      .filter((b) =>
+        Number(b.available_qty) > 0 &&
+        (!b.status || b.status === 'active') &&
+        (b.expiry_date >= today)
+      )
       .sort((a, b) => (a.expiry_date as string).localeCompare(b.expiry_date as string))
       .map((b) => ({
         id: b.id,

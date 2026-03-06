@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { updateStockBatchAction } from './actions'
+import { updateStockBatchAction, editStockBatchAction } from './actions'
 import type { StockBatch } from '@/lib/types/database'
 
 export type StockWithMedicine = StockBatch & {
@@ -68,9 +68,20 @@ function SortHeader({ label, column }: { label: string; column: import('@tanstac
 
 function StockRowActions({ batch }: { batch: StockWithMedicine }) {
   const [updateOpen, setUpdateOpen] = React.useState(false)
+  const [editOpen, setEditOpen] = React.useState(false)
   const [isSaving, setIsSaving] = React.useState(false)
+
+  // Quick update fields
   const [availableQty, setAvailableQty] = React.useState(String(batch.available_qty))
   const [salePrice, setSalePrice] = React.useState(String(batch.sale_price))
+
+  // Full edit fields
+  const [editBatchNo, setEditBatchNo] = React.useState(batch.batch_no)
+  const [editExpiryDate, setEditExpiryDate] = React.useState(batch.expiry_date)
+  const [editPurchasePrice, setEditPurchasePrice] = React.useState(String(batch.purchase_price))
+  const [editSalePrice, setEditSalePrice] = React.useState(String(batch.sale_price))
+  const [editInitialQty, setEditInitialQty] = React.useState(String(batch.initial_qty))
+  const [editAvailableQty, setEditAvailableQty] = React.useState(String(batch.available_qty))
 
   const handleUpdateStock = async () => {
     const qty = parseInt(availableQty, 10)
@@ -100,6 +111,39 @@ function StockRowActions({ batch }: { batch: StockWithMedicine }) {
     }
   }
 
+  const handleEditStock = async () => {
+    const purchasePrice = parseFloat(editPurchasePrice)
+    const salePriceVal = parseFloat(editSalePrice)
+    const initialQty = parseInt(editInitialQty, 10)
+    const availQty = parseInt(editAvailableQty, 10)
+
+    if (!editBatchNo.trim()) { toast.error('Batch number is required'); return }
+    if (!editExpiryDate) { toast.error('Expiry date is required'); return }
+    if (isNaN(purchasePrice) || purchasePrice < 0) { toast.error('Enter a valid purchase price'); return }
+    if (isNaN(salePriceVal) || salePriceVal < 0) { toast.error('Enter a valid sale price'); return }
+    if (isNaN(initialQty) || initialQty < 0) { toast.error('Enter a valid initial qty'); return }
+    if (isNaN(availQty) || availQty < 0) { toast.error('Enter a valid available qty'); return }
+    if (availQty > initialQty) { toast.error('Available qty cannot exceed initial qty'); return }
+
+    setIsSaving(true)
+    const result = await editStockBatchAction(batch.id, {
+      batch_no: editBatchNo.trim(),
+      expiry_date: editExpiryDate,
+      purchase_price: purchasePrice,
+      sale_price: salePriceVal,
+      initial_qty: initialQty,
+      available_qty: availQty,
+    })
+    setIsSaving(false)
+
+    if (result.error) {
+      toast.error(result.error)
+    } else {
+      toast.success('Stock batch updated successfully')
+      setEditOpen(false)
+    }
+  }
+
   return (
     <>
       <DropdownMenu>
@@ -110,8 +154,35 @@ function StockRowActions({ batch }: { batch: StockWithMedicine }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onSelect={() => {
+              setEditBatchNo(batch.batch_no)
+              setEditExpiryDate(batch.expiry_date)
+              setEditPurchasePrice(String(batch.purchase_price))
+              setEditSalePrice(String(batch.sale_price))
+              setEditInitialQty(String(batch.initial_qty))
+              setEditAvailableQty(String(batch.available_qty))
+              setEditOpen(true)
+            }}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => {
+              setAvailableQty(String(batch.available_qty))
+              setSalePrice(String(batch.sale_price))
+              setUpdateOpen(true)
+            }}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <PackagePlus className="h-4 w-4" />
+            Update Stock
+          </DropdownMenuItem>
           {batch.purchase_id && (
             <>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link
                   href={`/purchases/${batch.purchase_id}`}
@@ -130,23 +201,97 @@ function StockRowActions({ batch }: { batch: StockWithMedicine }) {
                   Purchase Edit
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
             </>
           )}
-          <DropdownMenuItem
-            onSelect={() => {
-              setAvailableQty(String(batch.available_qty))
-              setSalePrice(String(batch.sale_price))
-              setUpdateOpen(true)
-            }}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <PackagePlus className="h-4 w-4" />
-            Update Stock
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* ── Edit Dialog (full fields) ─────────────────────────────────────────── */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Stock Batch</DialogTitle>
+            <DialogDescription>
+              {batch.medicines?.name ?? 'Unknown'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_batch_no">Batch No *</Label>
+              <Input
+                id="edit_batch_no"
+                value={editBatchNo}
+                onChange={(e) => setEditBatchNo(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_expiry_date">Expiry Date *</Label>
+              <Input
+                id="edit_expiry_date"
+                type="date"
+                value={editExpiryDate}
+                onChange={(e) => setEditExpiryDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_purchase_price">Purchase Price (₹) *</Label>
+              <Input
+                id="edit_purchase_price"
+                type="number"
+                min={0}
+                step="0.01"
+                value={editPurchasePrice}
+                onChange={(e) => setEditPurchasePrice(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_sale_price">Sale Price (₹) *</Label>
+              <Input
+                id="edit_sale_price"
+                type="number"
+                min={0}
+                step="0.01"
+                value={editSalePrice}
+                onChange={(e) => setEditSalePrice(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_initial_qty">Initial Qty *</Label>
+              <Input
+                id="edit_initial_qty"
+                type="number"
+                min={0}
+                value={editInitialQty}
+                onChange={(e) => setEditInitialQty(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_available_qty">Available Qty *</Label>
+              <Input
+                id="edit_available_qty"
+                type="number"
+                min={0}
+                max={Number(editInitialQty) || undefined}
+                value={editAvailableQty}
+                onChange={(e) => setEditAvailableQty(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Sold: {(Number(editInitialQty) || 0) - (Number(editAvailableQty) || 0)}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={isSaving}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditStock} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Quick Update Dialog (qty + sale price only) ───────────────────────── */}
       <Dialog open={updateOpen} onOpenChange={setUpdateOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -9,22 +10,19 @@ import { ExportButtons } from '@/components/reports/export-buttons'
 export default async function OutOfStockReportPage() {
   const supabase = await createClient()
 
-  const { data: medicines } = await supabase
-    .from('medicines')
-    .select('id, name, company, reorder_level')
-    .eq('status', 'active')
+  const [medicines, stockBatches] = await Promise.all([
+    fetchAllRows<{ id: string; name: string; company: string | null; reorder_level: number }>(() =>
+      supabase.from('medicines').select('id, name, company, reorder_level').eq('status', 'active').order('name')),
+    fetchAllRows<{ medicine_id: string; available_qty: number }>(() =>
+      supabase.from('stock_batches').select('medicine_id, available_qty').eq('status', 'active').order('id')),
+  ])
 
-  const { data: stockBatches } = await supabase
-    .from('stock_batches')
-    .select('medicine_id, available_qty')
-    .eq('status', 'active')
-
-  const stockByMedicine = (stockBatches ?? []).reduce((acc, sb) => {
+  const stockByMedicine = stockBatches.reduce((acc, sb) => {
     acc[sb.medicine_id] = (acc[sb.medicine_id] ?? 0) + Number(sb.available_qty)
     return acc
   }, {} as Record<string, number>)
 
-  const lowStock = (medicines ?? []).filter(m =>
+  const lowStock = medicines.filter(m =>
     (stockByMedicine[m.id] ?? 0) <= m.reorder_level
   ).map(m => ({ ...m, available: stockByMedicine[m.id] ?? 0 }))
 

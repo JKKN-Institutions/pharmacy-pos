@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
@@ -28,33 +29,32 @@ export default async function IncomeExpenseReportPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let posBillsQuery = supabase
-    .from('pos_bills')
-    .select('bill_date, total')
-  if (params.from) posBillsQuery = posBillsQuery.gte('bill_date', params.from)
-  if (params.to) posBillsQuery = posBillsQuery.lte('bill_date', params.to)
-  const { data: posBills } = await posBillsQuery
-
-  let invoicesQuery = supabase
-    .from('invoices')
-    .select('invoice_date, paid')
-  if (params.from) invoicesQuery = invoicesQuery.gte('invoice_date', params.from)
-  if (params.to) invoicesQuery = invoicesQuery.lte('invoice_date', params.to)
-  const { data: invoices } = await invoicesQuery
-
-  let expensesQuery = supabase
-    .from('expenses')
-    .select('date, amount')
-  if (params.from) expensesQuery = expensesQuery.gte('date', params.from)
-  if (params.to) expensesQuery = expensesQuery.lte('date', params.to)
-  const { data: expenses } = await expensesQuery
-
-  let salaryQuery = supabase
-    .from('salary_records')
-    .select('date, amount')
-  if (params.from) salaryQuery = salaryQuery.gte('date', params.from)
-  if (params.to) salaryQuery = salaryQuery.lte('date', params.to)
-  const { data: salaryRecords } = await salaryQuery
+  const [posBills, invoices, expenses, salaryRecords] = await Promise.all([
+    fetchAllRows<{ bill_date: string; total: number }>(() => {
+      let q = supabase.from('pos_bills').select('bill_date, total').order('id')
+      if (params.from) q = q.gte('bill_date', params.from)
+      if (params.to) q = q.lte('bill_date', params.to)
+      return q
+    }),
+    fetchAllRows<{ invoice_date: string; paid: number }>(() => {
+      let q = supabase.from('invoices').select('invoice_date, paid').order('id')
+      if (params.from) q = q.gte('invoice_date', params.from)
+      if (params.to) q = q.lte('invoice_date', params.to)
+      return q
+    }),
+    fetchAllRows<{ date: string; amount: number }>(() => {
+      let q = supabase.from('expenses').select('date, amount').order('id')
+      if (params.from) q = q.gte('date', params.from)
+      if (params.to) q = q.lte('date', params.to)
+      return q
+    }),
+    fetchAllRows<{ date: string; amount: number }>(() => {
+      let q = supabase.from('salary_records').select('date, amount').order('id')
+      if (params.from) q = q.gte('date', params.from)
+      if (params.to) q = q.lte('date', params.to)
+      return q
+    }),
+  ])
 
   // Build monthly aggregates
   const monthlyMap = new Map<string, { income: number; expenses: number }>()
@@ -63,22 +63,22 @@ export default async function IncomeExpenseReportPage({
     if (!monthlyMap.has(key)) monthlyMap.set(key, { income: 0, expenses: 0 })
   }
 
-  for (const bill of posBills ?? []) {
+  for (const bill of posBills) {
     const key = getMonthKey(bill.bill_date)
     ensureMonth(key)
     monthlyMap.get(key)!.income += Number(bill.total)
   }
-  for (const inv of invoices ?? []) {
+  for (const inv of invoices) {
     const key = getMonthKey(inv.invoice_date)
     ensureMonth(key)
     monthlyMap.get(key)!.income += Number(inv.paid)
   }
-  for (const exp of expenses ?? []) {
+  for (const exp of expenses) {
     const key = getMonthKey(exp.date)
     ensureMonth(key)
     monthlyMap.get(key)!.expenses += Number(exp.amount)
   }
-  for (const sal of salaryRecords ?? []) {
+  for (const sal of salaryRecords) {
     const key = getMonthKey(sal.date)
     ensureMonth(key)
     monthlyMap.get(key)!.expenses += Number(sal.amount)

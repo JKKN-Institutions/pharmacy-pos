@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { Suspense } from 'react'
 import { KpiCards } from '@/components/dashboard/kpi-cards'
 import { RevenueChart } from '@/components/dashboard/revenue-chart'
@@ -119,18 +120,17 @@ async function KpiCardsServer() {
   const supabase = await createClient()
   const today = format(new Date(), 'yyyy-MM-dd')
 
-  const [
-    { data: posBills },
-    { data: invoices },
-    { data: expenses },
-    { data: salary },
-    { data: purchases },
-  ] = await Promise.all([
-    supabase.from('pos_bills').select('total, bill_date'),
-    supabase.from('invoices').select('total'),
-    supabase.from('expenses').select('amount'),
-    supabase.from('salary_records').select('amount'),
-    supabase.from('purchases').select('total'),
+  const [posBills, invoices, expenses, salary, purchases] = await Promise.all([
+    fetchAllRows<{ total: number; bill_date: string }>(() =>
+      supabase.from('pos_bills').select('total, bill_date').order('id')),
+    fetchAllRows<{ total: number }>(() =>
+      supabase.from('invoices').select('total').order('id')),
+    fetchAllRows<{ amount: number }>(() =>
+      supabase.from('expenses').select('amount').order('id')),
+    fetchAllRows<{ amount: number }>(() =>
+      supabase.from('salary_records').select('amount').order('id')),
+    fetchAllRows<{ total: number }>(() =>
+      supabase.from('purchases').select('total').order('id')),
   ])
 
   const posTotal     = (posBills  ?? []).reduce((s, b) => s + Number(b.total),  0)
@@ -160,9 +160,11 @@ async function RevenueChartServer() {
   const slots    = getLast12MonthSlots()
   const fromDate = slots[0] + '-01'
 
-  const [{ data: bills }, { data: invoices }] = await Promise.all([
-    supabase.from('pos_bills').select('bill_date, total').gte('bill_date', fromDate),
-    supabase.from('invoices').select('invoice_date, total').gte('invoice_date', fromDate),
+  const [bills, invoices] = await Promise.all([
+    fetchAllRows<{ bill_date: string; total: number }>(() =>
+      supabase.from('pos_bills').select('bill_date, total').gte('bill_date', fromDate).order('id')),
+    fetchAllRows<{ invoice_date: string; total: number }>(() =>
+      supabase.from('invoices').select('invoice_date, total').gte('invoice_date', fromDate).order('id')),
   ])
 
   const posMap:     Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
@@ -203,10 +205,8 @@ async function ExpensesChartServer() {
   const slots    = getLast12MonthSlots()
   const fromDate = slots[0] + '-01'
 
-  const { data: expenses } = await supabase
-    .from('expenses')
-    .select('date, amount')
-    .gte('date', fromDate)
+  const expenses = await fetchAllRows<{ date: string; amount: number }>(() =>
+    supabase.from('expenses').select('date, amount').gte('date', fromDate).order('id'))
 
   const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
   ;(expenses ?? []).forEach(e => {
@@ -220,9 +220,8 @@ async function ExpensesChartServer() {
 async function ExpenseByTypeServer() {
   const supabase = await createClient()
 
-  const { data: expenses } = await supabase
-    .from('expenses')
-    .select('expense_type, amount')
+  const expenses = await fetchAllRows<{ expense_type: string; amount: number }>(() =>
+    supabase.from('expenses').select('expense_type, amount').order('id'))
 
   const typeMap: Record<string, number> = {}
   ;(expenses ?? []).forEach(e => {
@@ -242,10 +241,8 @@ async function SalaryChartServer() {
   const slots    = getLast12MonthSlots()
   const fromDate = slots[0] + '-01'
 
-  const { data: salary } = await supabase
-    .from('salary_records')
-    .select('date, amount')
-    .gte('date', fromDate)
+  const salary = await fetchAllRows<{ date: string; amount: number }>(() =>
+    supabase.from('salary_records').select('date, amount').gte('date', fromDate).order('id'))
 
   const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
   ;(salary ?? []).forEach(r => {
@@ -261,10 +258,8 @@ async function PurchaseChartServer() {
   const slots    = getLast12MonthSlots()
   const fromDate = slots[0] + '-01'
 
-  const { data: purchases } = await supabase
-    .from('purchases')
-    .select('purchase_date, total')
-    .gte('purchase_date', fromDate)
+  const purchases = await fetchAllRows<{ purchase_date: string; total: number }>(() =>
+    supabase.from('purchases').select('purchase_date, total').gte('purchase_date', fromDate).order('id'))
 
   const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
   ;(purchases ?? []).forEach(p => {
@@ -280,10 +275,8 @@ async function CustomerChartServer() {
   const slots    = getLast12MonthSlots()
   const fromDate = slots[0] + '-01T00:00:00'
 
-  const { data: customers } = await supabase
-    .from('customers')
-    .select('created_at')
-    .gte('created_at', fromDate)
+  const customers = await fetchAllRows<{ created_at: string }>(() =>
+    supabase.from('customers').select('created_at').gte('created_at', fromDate).order('id'))
 
   const map: Record<string, number> = Object.fromEntries(slots.map(s => [s, 0]))
   ;(customers ?? []).forEach(c => {

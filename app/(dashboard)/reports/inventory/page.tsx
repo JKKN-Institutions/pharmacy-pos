@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { format } from 'date-fns'
 import { formatINR } from '@/lib/utils/currency'
@@ -23,15 +24,15 @@ type StockBatchRow = {
 export default async function InventoryReportPage() {
   const supabase = await createClient()
 
-  const { data: batches } = await supabase
-    .from('stock_batches')
-    .select(
-      'id, medicine_id, batch_no, expiry_date, available_qty, purchase_price, sale_price, status, medicines(name)'
-    )
-    .eq('status', 'active')
-    .order('expiry_date', { ascending: true })
-
-  const rows = (batches ?? []) as unknown as StockBatchRow[]
+  const rows = await fetchAllRows<StockBatchRow>(() =>
+    supabase
+      .from('stock_batches')
+      .select(
+        'id, medicine_id, batch_no, expiry_date, available_qty, purchase_price, sale_price, status, medicines(name)'
+      )
+      .eq('status', 'active')
+      .order('expiry_date', { ascending: true }),
+  )
   const totalStockValue = rows.reduce(
     (s, r) => s + Number(r.available_qty) * Number(r.purchase_price),
     0

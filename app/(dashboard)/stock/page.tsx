@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { stockColumns } from './columns'
 import { PageHeader } from '@/components/ui/page-header'
 import { StockDataTable } from '@/components/stock/stock-data-table'
@@ -46,11 +47,9 @@ export default async function StockPage({
   // ── Optional search: resolve medicine names → IDs first ──────────────────────
   let medicineIdFilter: string[] | null = null
   if (search) {
-    const { data: matchingMeds } = await supabase
-      .from('medicines')
-      .select('id')
-      .ilike('name', `%${search}%`)
-    medicineIdFilter = (matchingMeds ?? []).map((m) => m.id)
+    const matchingMeds = await fetchAllRows<{ id: string }>(() =>
+      supabase.from('medicines').select('id').ilike('name', `%${search}%`).order('id'))
+    medicineIdFilter = matchingMeds.map((m) => m.id)
   }
 
   // Short-circuit: search returned no matching medicines → empty result

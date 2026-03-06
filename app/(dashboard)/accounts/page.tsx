@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatINR } from '@/lib/utils/currency'
@@ -23,12 +24,12 @@ interface CustomerLedger {
 export default async function AccountsPage() {
   const supabase = await createClient()
 
-  const { data: invoices } = await supabase
-    .from('invoices')
-    .select('id, invoice_no, invoice_date, total, paid, due, payment_status, customer_id, customers(first_name, last_name, phone)')
-    .order('invoice_date', { ascending: false })
-
-  const invoicesData = (invoices ?? []) as unknown as InvoiceRow[]
+  const invoicesData = await fetchAllRows<InvoiceRow>(() =>
+    supabase
+      .from('invoices')
+      .select('id, invoice_no, invoice_date, total, paid, due, payment_status, customer_id, customers(first_name, last_name, phone)')
+      .order('invoice_date', { ascending: false }),
+  )
   const todayStr = new Date().toISOString().slice(0, 10)
 
   const { data: todayBills } = await supabase.from('pos_bills').select('paid').eq('bill_date', todayStr).neq('status', 'cancelled')

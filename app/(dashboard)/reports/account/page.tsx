@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
@@ -43,17 +44,17 @@ export default async function AccountReportPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let query = supabase
-    .from('invoices')
-    .select(
-      'id, invoice_no, total, paid, due, payment_status, customer_id, customer_name, customer_phone'
-    )
-    .neq('payment_status', 'paid')
-    .order('customer_name', { ascending: true })
-
-  if (params.status) query = query.eq('payment_status', params.status)
-  const { data: invoices } = await query
-  const rows = (invoices ?? []) as InvoiceRow[]
+  const rows = await fetchAllRows<InvoiceRow>(() => {
+    let q = supabase
+      .from('invoices')
+      .select(
+        'id, invoice_no, total, paid, due, payment_status, customer_id, customer_name, customer_phone'
+      )
+      .neq('payment_status', 'paid')
+      .order('customer_name', { ascending: true })
+    if (params.status) q = q.eq('payment_status', params.status)
+    return q
+  })
   const ledgerMap = new Map<string, CustomerLedgerEntry>()
   for (const inv of rows) {
     const key = inv.customer_id ?? inv.customer_name ?? 'Unknown'

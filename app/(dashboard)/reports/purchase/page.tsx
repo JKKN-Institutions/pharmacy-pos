@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
@@ -26,18 +27,17 @@ export default async function PurchaseReportPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let query = supabase
-    .from('purchases')
-    .select('id, invoice_no, purchase_date, total, status, suppliers(name)', { count: 'exact' })
-    .order('purchase_date', { ascending: false })
-
-  if (params.from) query = query.gte('purchase_date', params.from)
-  if (params.to) query = query.lte('purchase_date', params.to)
-  if (params.status) query = query.eq('status', params.status)
-
-  const { data: purchases, count } = await query
-
-  const rows = (purchases ?? []) as unknown as PurchaseRow[]
+  const rows = await fetchAllRows<PurchaseRow>(() => {
+    let q = supabase
+      .from('purchases')
+      .select('id, invoice_no, purchase_date, total, status, suppliers(name)')
+      .order('purchase_date', { ascending: false })
+    if (params.from) q = q.gte('purchase_date', params.from)
+    if (params.to) q = q.lte('purchase_date', params.to)
+    if (params.status) q = q.eq('status', params.status)
+    return q
+  })
+  const count = rows.length
   const totalCost = rows.reduce((s, r) => s + Number(r.total), 0)
 
   const exportColumns = [

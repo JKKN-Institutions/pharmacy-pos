@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllActiveMedicines } from '@/lib/supabase/queries'
 import { notFound } from 'next/navigation'
 import { PurchaseForm } from '@/components/purchases/purchase-form'
 import type { PurchaseFormInitialData } from '@/components/purchases/purchase-form'
@@ -20,7 +21,7 @@ export default async function EditPurchasePage({
     { data: purchase },
     { data: items },
     { data: suppliers },
-    { data: activeMedicines },
+    activeMedicines,
   ] = await Promise.all([
     supabase
       .from('purchases')
@@ -33,7 +34,7 @@ export default async function EditPurchasePage({
       .eq('purchase_id', id)
       .order('id'),
     supabase.from('suppliers').select('id, name').order('name'),
-    supabase.from('medicines').select('id, name, company, unit, tax_percent').eq('status', 'active').order('name'),
+    fetchAllActiveMedicines(supabase),
   ])
 
   if (!purchase) notFound()
@@ -42,7 +43,7 @@ export default async function EditPurchasePage({
   // If we only send active medicines to the form, those inactive medicine IDs
   // won't be found by the combobox and it will show "Select medicine" instead
   // of the actual name. So we merge any missing ones in (regardless of status).
-  let medicines = activeMedicines ?? []
+  let medicines = activeMedicines
   if (items && items.length > 0) {
     const activeIds = new Set(medicines.map((m) => m.id))
     const missingIds = items

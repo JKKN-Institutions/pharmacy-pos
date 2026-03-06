@@ -77,6 +77,58 @@ export async function updateStockBatchAction(
   return { success: true }
 }
 
+// ─── Edit Stock Batch (full) ──────────────────────────────────────────────────
+
+export async function editStockBatchAction(
+  batchId: string,
+  data: {
+    batch_no: string
+    expiry_date: string
+    purchase_price: number
+    sale_price: number
+    initial_qty: number
+    available_qty: number
+  },
+) {
+  const supabase = await createClient()
+
+  const { data: batch, error: fetchError } = await supabase
+    .from('stock_batches')
+    .select('id, sold_qty')
+    .eq('id', batchId)
+    .single()
+
+  if (fetchError || !batch) return { error: 'Batch not found' }
+
+  if (!data.batch_no.trim()) return { error: 'Batch number is required' }
+  if (!data.expiry_date) return { error: 'Expiry date is required' }
+  if (data.purchase_price < 0) return { error: 'Purchase price cannot be negative' }
+  if (data.sale_price < 0) return { error: 'Sale price cannot be negative' }
+  if (data.initial_qty < 0) return { error: 'Initial qty cannot be negative' }
+  if (data.available_qty < 0) return { error: 'Available qty cannot be negative' }
+  if (data.available_qty > data.initial_qty) return { error: 'Available qty cannot exceed initial qty' }
+
+  const newSoldQty = data.initial_qty - data.available_qty
+
+  const { error: updateError } = await supabase
+    .from('stock_batches')
+    .update({
+      batch_no: data.batch_no.trim(),
+      expiry_date: data.expiry_date,
+      purchase_price: data.purchase_price,
+      sale_price: data.sale_price,
+      initial_qty: data.initial_qty,
+      available_qty: data.available_qty,
+      sold_qty: newSoldQty,
+    })
+    .eq('id', batchId)
+
+  if (updateError) return { error: updateError.message }
+
+  revalidatePath('/stock')
+  return { success: true }
+}
+
 // ─── Bulk Import — Step 1: Prepare payloads ───────────────────────────────────
 
 /**

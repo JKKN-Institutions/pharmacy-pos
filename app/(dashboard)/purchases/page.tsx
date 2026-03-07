@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { BulkImportPurchasesButton } from '@/components/purchases/bulk-import-button'
 import { AdvancedDataTable } from '@/components/ui/advanced-data-table'
 import { bulkDeletePurchasesAction } from './actions'
+import { PurchaseTableFilters } from '@/components/purchases/purchase-table-filters'
 
 const SORTABLE_DB_COLUMNS = ['purchase_date', 'total', 'subtotal', 'tax', 'discount', 'created_at']
 
@@ -15,6 +16,8 @@ export default async function PurchasesPage({
 }: {
   searchParams: Promise<{
     search?: string
+    status?: string
+    supplier?: string
     from?: string
     to?: string
     page?: string
@@ -51,10 +54,15 @@ export default async function PurchasesPage({
     .range(rangeFrom, rangeTo)
 
   if (params.search) query = query.ilike('suppliers.name', `%${params.search}%`)
+  if (params.status) query = query.eq('status', params.status)
+  if (params.supplier) query = query.eq('supplier_id', params.supplier)
   if (params.from) query = query.gte('purchase_date', params.from)
   if (params.to) query = query.lte('purchase_date', params.to)
 
-  const { data: purchases, count } = await query
+  const [{ data: purchases, count }, { data: suppliers }] = await Promise.all([
+    query,
+    supabase.from('suppliers').select('id, name').order('name'),
+  ])
 
   // Flatten supplier name for column accessor
   const data = (purchases ?? []).map((p: any) => ({
@@ -62,7 +70,7 @@ export default async function PurchasesPage({
     supplier_name: p.suppliers?.name ?? '',
   }))
 
-  const isFiltered = !!(params.search || params.from || params.to)
+  const isFiltered = !!(params.search || params.status || params.supplier || params.from || params.to)
 
   return (
     <div className="space-y-6">
@@ -99,6 +107,13 @@ export default async function PurchasesPage({
             total: 'Amount',
             purchase_date: 'Purchase Date',
           }}
+          extraFilters={
+            <PurchaseTableFilters
+              currentStatus={params.status ?? ''}
+              currentSupplier={params.supplier ?? ''}
+              suppliers={suppliers ?? []}
+            />
+          }
         />
       </div>
     </div>

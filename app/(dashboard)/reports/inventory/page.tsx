@@ -31,7 +31,8 @@ export default async function InventoryReportPage() {
         'id, medicine_id, batch_no, expiry_date, available_qty, purchase_price, sale_price, status, medicines(name)'
       )
       .eq('status', 'active')
-      .order('expiry_date', { ascending: true }),
+      .order('expiry_date', { ascending: true })
+      .order('id', { ascending: true }),
   )
   const totalStockValue = rows.reduce(
     (s, r) => s + Number(r.available_qty) * Number(r.purchase_price),

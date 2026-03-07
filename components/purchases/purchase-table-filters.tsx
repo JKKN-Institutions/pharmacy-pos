@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ReportDateFilter } from '@/components/reports/report-date-filter'
 
 interface PurchaseTableFiltersProps {
   currentStatus: string
@@ -46,6 +47,8 @@ export function PurchaseTableFilters({ currentStatus, currentSupplier, suppliers
           ))}
         </SelectContent>
       </Select>
+
+      <ReportDateFilter />
     </>
   )
 }

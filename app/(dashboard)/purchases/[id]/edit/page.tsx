@@ -30,7 +30,7 @@ export default async function EditPurchasePage({
       .single(),
     supabase
       .from('purchase_items')
-      .select('medicine_id, batch_no, expiry_date, packing_qty, quantity, total_qty, purchase_price, sale_price, discount_type, discount_value, tax, price')
+      .select('medicine_id, batch_no, expiry_date, packing_qty, quantity, free_qty, total_qty, purchase_price, sale_price, discount_type, discount_value, tax, price')
       .eq('purchase_id', id)
       .order('id'),
     supabase.from('suppliers').select('id, name').order('name'),
@@ -79,6 +79,7 @@ export default async function EditPurchasePage({
       expiry_date: item.expiry_date,
       packing_qty: Number(item.packing_qty) || 1,
       quantity: Number(item.quantity) || 0,
+      free_qty: Number(item.free_qty) || 0,
       total_qty: Number(item.total_qty) || 0,
       purchase_price: Number(item.purchase_price) || 0,
       sale_price: Number(item.sale_price) || 0,

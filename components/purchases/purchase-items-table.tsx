@@ -28,6 +28,7 @@ export type PurchaseItem = {
   expiry_date:    string | null
   packing_qty:    number | null
   quantity:       number | null
+  free_qty:       number | null
   total_qty:      number | null
   purchase_price: number | null
   sale_price:     number | null
@@ -44,7 +45,7 @@ const TD = 'py-3 px-4 first:pl-6 last:pr-6'
 
 // Columns that display right-aligned numeric values
 const RIGHT_COLS = new Set([
-  'packing_qty', 'quantity', 'purchase_price',
+  'packing_qty', 'quantity', 'free_qty', 'purchase_price',
   'sale_price', 'discount_value', 'tax', 'price',
 ])
 
@@ -106,6 +107,18 @@ const columns: ColumnDef<PurchaseItem>[] = [
         {(getValue() as number | null) ?? '—'}
       </span>
     ),
+  },
+  {
+    accessorKey: 'free_qty',
+    header: 'Free',
+    cell: ({ getValue }) => {
+      const val = getValue() as number | null
+      return (
+        <span className={`text-sm tabular-nums ${val && val > 0 ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-muted-foreground'}`}>
+          {val && val > 0 ? `+${val}` : '—'}
+        </span>
+      )
+    },
   },
   {
     accessorKey: 'purchase_price',

@@ -58,6 +58,7 @@ const itemSchema = z.object({
   expiry_date: z.string().min(1, 'Expiry date required'),
   packing_qty: z.coerce.number().min(1).default(1),
   quantity: z.coerce.number().min(1, 'Qty required'),
+  free_qty: z.coerce.number().min(0).default(0),
   total_qty: z.coerce.number().min(1),
   purchase_price: z.coerce.number().min(0, 'Price required'),
   sale_price: z.coerce.number().min(0),
@@ -94,6 +95,7 @@ export interface PurchaseFormInitialData {
     expiry_date: string
     packing_qty: number
     quantity: number
+    free_qty: number
     total_qty: number
     purchase_price: number
     sale_price: number
@@ -201,6 +203,7 @@ const defaultItem = {
   expiry_date: '',
   packing_qty: 1,
   quantity: 1,
+  free_qty: 0,
   total_qty: 1,
   purchase_price: 0,
   sale_price: 0,
@@ -279,7 +282,7 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
   // is always synchronous and reflects the just-typed value immediately.
   function recalcItem(index: number) {
     const item = form.getValues(`items.${index}`)
-    const totalQty = (Number(item.packing_qty) || 1) * (Number(item.quantity) || 0)
+    const totalQty = (Number(item.packing_qty) || 1) * (Number(item.quantity) || 0) + (Number(item.free_qty) || 0)
     const line = calculateLineItem({
       qty: Number(item.quantity) || 0,
       unit_price: Number(item.purchase_price) || 0,
@@ -385,6 +388,7 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
                     <TableHead className="min-w-[130px] text-xs font-semibold">Expiry Date *</TableHead>
                     <TableHead className="min-w-[80px] text-xs font-semibold">Packing Qty</TableHead>
                     <TableHead className="min-w-[80px] text-xs font-semibold">Quantity *</TableHead>
+                    <TableHead className="min-w-[70px] text-xs font-semibold">Free</TableHead>
                     <TableHead className="min-w-[90px] text-xs font-semibold">Total Qty</TableHead>
                     <TableHead className="min-w-[110px] text-xs font-semibold">Purchase Price *</TableHead>
                     <TableHead className="min-w-[110px] text-xs font-semibold">Sale Price *</TableHead>
@@ -477,11 +481,29 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
                         )} />
                       </TableCell>
 
+                      {/* Free Qty */}
+                      <TableCell className="py-2 px-2">
+                        <FormField control={form.control} name={`items.${index}.free_qty`} render={({ field }) => (
+                          <FormItem className="m-0">
+                            <FormControl>
+                              <Input
+                                className="w-[70px] h-9 text-sm"
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                {...field}
+                                onChange={e => { field.onChange(e); recalcItem(index) }}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )} />
+                      </TableCell>
+
                       {/* Total Qty — readonly */}
                       <TableCell className="py-2 px-2">
                         <span className="inline-flex items-center justify-center w-[80px] h-9 text-sm tabular-nums text-muted-foreground">
                           {watchedItems[index]
-                            ? (Number(watchedItems[index].packing_qty) || 1) * (Number(watchedItems[index].quantity) || 0)
+                            ? (Number(watchedItems[index].packing_qty) || 1) * (Number(watchedItems[index].quantity) || 0) + (Number(watchedItems[index].free_qty) || 0)
                             : 0}
                         </span>
                       </TableCell>

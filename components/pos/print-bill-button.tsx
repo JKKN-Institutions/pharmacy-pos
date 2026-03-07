@@ -78,7 +78,7 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
   thead th { font-size: 10px; font-weight: 700; text-align: left; padding: 3px 2px; border-bottom: 1px solid #000; }
   thead th.right { text-align: right; }
   tbody td { padding: 2px 2px; vertical-align: top; }
-  tbody td.name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tbody td.name { word-break: break-word; }
   tr.batch td { font-size: 9px; color: #666; padding: 0 2px 3px 2px; }
   tr.alt td { background: #f5f5f5; }
   .totals { margin-top: 4px; }

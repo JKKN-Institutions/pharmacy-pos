@@ -10,6 +10,7 @@ export interface PurchaseItemInput {
   expiry_date: string
   packing_qty: number
   quantity: number
+  free_qty: number
   total_qty: number
   purchase_price: number
   sale_price: number
@@ -71,6 +72,7 @@ export async function createPurchaseAction(data: {
       expiry_date:    item.expiry_date,
       packing_qty:    item.packing_qty,
       quantity:       item.quantity,
+      free_qty:       item.free_qty,
       total_qty:      item.total_qty,
       purchase_price: item.purchase_price,
       sale_price:     item.sale_price,
@@ -197,6 +199,7 @@ export async function updatePurchaseAction(
       expiry_date:    item.expiry_date,
       packing_qty:    item.packing_qty,
       quantity:       item.quantity,
+      free_qty:       item.free_qty,
       total_qty:      item.total_qty,
       purchase_price: item.purchase_price,
       sale_price:     item.sale_price,

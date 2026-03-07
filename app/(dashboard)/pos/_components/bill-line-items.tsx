@@ -236,7 +236,7 @@ export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: B
 
                 {/* Name */}
                 <td className="px-3 py-2">
-                  <div className="font-medium text-sm max-w-[160px] truncate" title={item.medicine_name}>
+                  <div className="font-medium text-sm">
                     {item.medicine_name}
                   </div>
                 </td>

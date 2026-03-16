@@ -50,6 +50,7 @@ const itemSchema = z.object({
   expiry_date: z.string().min(1, 'Expiry date required'),
   packing_qty: z.coerce.number().min(1).default(1),
   quantity: z.coerce.number().min(1, 'Qty required'),
+  free_qty: z.coerce.number().min(0).default(0),
   total_qty: z.coerce.number().min(1),
   purchase_price: z.coerce.number().min(0, 'Price required'),
   sale_price: z.coerce.number().min(0),
@@ -86,6 +87,7 @@ export interface PurchaseFormInitialData {
     expiry_date: string
     packing_qty: number
     quantity: number
+    free_qty: number
     total_qty: number
     purchase_price: number
     sale_price: number
@@ -204,6 +206,7 @@ const defaultItem = {
   expiry_date: '',
   packing_qty: 1,
   quantity: 1,
+  free_qty: 0,
   total_qty: 1,
   purchase_price: 0,
   sale_price: 0,

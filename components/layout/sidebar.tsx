@@ -28,7 +28,7 @@ import {
 import {
   LayoutDashboard, ShoppingCart, FileText, ClipboardList,
   Archive, Users, Truck, DollarSign, BarChart3, Settings,
-  Pill, Receipt, BookOpen, UserCog, Percent, ChevronRight, Tag,
+  Pill, Receipt, BookOpen, UserCog, Percent, ChevronRight, Tag, DatabaseZap,
 } from 'lucide-react'
 
 type NavItem = {
@@ -67,9 +67,10 @@ const financeItems: NavItem[] = [
 ]
 
 const settingsSubItems: SettingsSubItem[] = [
-  { href: '/medicine-categories', icon: Tag,     label: 'Medicine Categories', roles: ['admin', 'manager', 'pharmacist'] },
-  { href: '/settings/taxes',      icon: Percent, label: 'Tax Rates',           roles: ['admin'] },
-  { href: '/settings',            icon: Settings,label: 'General',             roles: ['admin'] },
+  { href: '/medicine-categories',        icon: Tag,         label: 'Medicine Categories', roles: ['admin', 'manager', 'pharmacist'] },
+  { href: '/settings/taxes',             icon: Percent,     label: 'Tax Rates',           roles: ['admin'] },
+  { href: '/settings/data-migration',    icon: DatabaseZap, label: 'Data Migration',      roles: ['admin'] },
+  { href: '/settings',                   icon: Settings,    label: 'General',             roles: ['admin'] },
 ]
 
 /** Adaptive icon box — bg uses currentColor so it stays subtle on white

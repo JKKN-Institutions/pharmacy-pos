@@ -31,7 +31,7 @@ export default async function StockPage({
 }) {
   const params = await searchParams
 
-  const view      = params.view === 'expired' ? 'expired' : 'live'
+  const view      = params.view === 'expired' ? 'expired' : params.view === 'all' ? 'all' : 'live'
   const page      = Math.max(1, parseInt(params.page ?? '1', 10))
   const rawPageSize = parseInt(params.pageSize ?? '15', 10)
   const pageSize    = VALID_PAGE_SIZES.includes(rawPageSize) ? rawPageSize : 15
@@ -63,9 +63,10 @@ export default async function StockPage({
 
     if (view === 'live') {
       q = q.eq('status', 'active').gte('expiry_date', today).gt('available_qty', 0)
-    } else {
+    } else if (view === 'expired') {
       q = q.or(`status.eq.expired,expiry_date.lt.${today}`)
     }
+    // view === 'all' → no filters, show everything
 
     if (medicineIdFilter !== null) {
       q = q.in('medicine_id', medicineIdFilter)
@@ -79,7 +80,7 @@ export default async function StockPage({
     totalCount = count ?? 0
   }
 
-  const title       = view === 'live' ? 'Live Stock' : 'Expired Stock'
+  const title       = view === 'live' ? 'Live Stock' : view === 'expired' ? 'Expired Stock' : 'All Stock'
   const description = `${totalCount.toLocaleString()} batch${totalCount !== 1 ? 'es' : ''}`
 
   return (

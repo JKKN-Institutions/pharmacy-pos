@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Upload, Download, CheckCircle2, AlertCircle, FileText } from 'lucide-react'
 import { importMedicinesAction, importCustomersAction, importSuppliersAction } from '@/app/(dashboard)/settings/data-migration/actions'
+import { LiveStockImport } from '@/components/settings/live-stock-import'
 
 type ImportResult = { success?: boolean; error?: string; count?: number } | undefined
 
@@ -99,12 +100,25 @@ function ImportSection({ title, description, templateFilename, templateHeaders, 
 
 export function DataMigrationForm() {
   return (
-    <Tabs defaultValue="medicines" className="space-y-4">
+    <Tabs defaultValue="live-stock" className="space-y-4">
       <TabsList>
+        <TabsTrigger value="live-stock">Live Stock</TabsTrigger>
         <TabsTrigger value="medicines">Medicines</TabsTrigger>
         <TabsTrigger value="customers">Customers</TabsTrigger>
         <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
       </TabsList>
+
+      <TabsContent value="live-stock">
+        <Card className="rounded-2xl shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Import Live Stock Data</CardTitle>
+            <CardDescription>Import your legacy pharmacy stock Excel/JSON export — creates medicines + stock batches in one step</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LiveStockImport />
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       <TabsContent value="medicines">
         <Card className="rounded-2xl shadow-sm">

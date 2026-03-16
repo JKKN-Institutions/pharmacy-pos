@@ -218,6 +218,7 @@ export function StockDataTable({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="live">Live Stock</SelectItem>
+              <SelectItem value="all">All Stock</SelectItem>
               <SelectItem value="expired">Expired</SelectItem>
             </SelectContent>
           </Select>

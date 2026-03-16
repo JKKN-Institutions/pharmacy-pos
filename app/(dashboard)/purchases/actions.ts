@@ -384,6 +384,55 @@ export async function bulkDeletePurchasesAction(
   return { deleted: ids.length }
 }
 
+// ─── Supplier-specific last sale prices ──────────────────────────────────────
+
+/**
+ * Fetches the most recent sale_price for each medicine previously purchased
+ * from a given supplier. Used to auto-suggest sale prices when creating a new
+ * purchase from the same supplier.
+ */
+export async function getLastSalePricesBySupplierAction(
+  supplierId: string,
+): Promise<{ data: Record<string, number> }> {
+  if (!supplierId) return { data: {} }
+
+  const supabase = await createClient()
+
+  // Get purchase IDs for this supplier, ordered by most recent first
+  const { data: purchases } = await supabase
+    .from('purchases')
+    .select('id')
+    .eq('supplier_id', supplierId)
+    .order('purchase_date', { ascending: false })
+
+  if (!purchases || purchases.length === 0) return { data: {} }
+
+  const purchaseIds = purchases.map(p => p.id)
+
+  // Get all purchase_items for those purchases
+  const { data: rows } = await supabase
+    .from('purchase_items')
+    .select('medicine_id, sale_price, purchase_id')
+    .in('purchase_id', purchaseIds)
+
+  if (!rows || rows.length === 0) return { data: {} }
+
+  // Build purchase_id → index map for ordering (lower index = more recent)
+  const orderMap = new Map(purchaseIds.map((id, i) => [id, i]))
+
+  // Sort by purchase recency then keep only the first (most recent) per medicine
+  const sorted = [...rows].sort((a, b) => (orderMap.get(a.purchase_id) ?? 999) - (orderMap.get(b.purchase_id) ?? 999))
+
+  const map: Record<string, number> = {}
+  for (const row of sorted) {
+    if (row.medicine_id && !(row.medicine_id in map)) {
+      map[row.medicine_id] = Number(row.sale_price)
+    }
+  }
+
+  return { data: map }
+}
+
 export async function deletePurchaseAction(id: string) {
   const supabase = await createClient()
 

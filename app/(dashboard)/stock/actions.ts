@@ -129,6 +129,47 @@ export async function editStockBatchAction(
   return { success: true }
 }
 
+// ─── Clean Import — Wipe stock_batches before re-import ──────────────────────
+
+/**
+ * Deletes ALL existing stock_batches for the current branch.
+ * Does NOT delete medicines (they are referenced by purchase_items).
+ * Does NOT delete purchases or purchase_items.
+ *
+ * This is safe because stock_batches are the "snapshot" layer —
+ * the Excel live stock file replaces them entirely.
+ */
+export async function cleanWipeForReimportAction(): Promise<{
+  deletedBatches: number
+  error?: string
+}> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { deletedBatches: 0, error: 'Not authenticated' }
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('branch_id')
+    .eq('auth_user_id', user.id)
+    .single()
+  if (!profile?.branch_id)
+    return { deletedBatches: 0, error: 'Could not determine branch' }
+
+  // Delete all stock_batches for this branch (purchases stay intact)
+  const { count: batchCount, error: batchErr } = await supabase
+    .from('stock_batches')
+    .delete({ count: 'exact' })
+    .eq('branch_id', profile.branch_id)
+
+  if (batchErr) return { deletedBatches: 0, error: 'Failed to delete stock batches: ' + batchErr.message }
+
+  revalidatePath('/stock')
+
+  return { deletedBatches: batchCount ?? 0 }
+}
+
 // ─── Bulk Import — Step 1: Prepare payloads ───────────────────────────────────
 
 /**
@@ -163,26 +204,72 @@ export async function prepareStockBatchImportAction(
   const branchId = profile.branch_id
 
   // Build medicine name → id map from existing catalogue
+  // Supports two matching strategies:
+  //   1. Exact match: "AFENAK PLUS" → "AFENAK PLUS"
+  //   2. Prefix match: "AFENAK PLUS" → "AFENAK PLUS Tablet" (DB has dosage-form suffix)
   const { data: medicines } = await supabase
     .from('medicines')
     .select('id, name')
     .eq('branch_id', branchId)
 
-  const medMap = new Map<string, string>()
+  // Known dosage-form suffixes appended by the old import system
+  const KNOWN_SUFFIXES = new Set([
+    'tablet', 'cream', 'capsule', 'injection', 'cosmetics', 'eyedrop',
+    'paste', 'gel', 'drops', 'drop', 'oil', 'soap', 'syrup', 'diaper',
+    'device', 'powder', 'ointment', 'lotion', 'suspension', 'solution',
+    'spray', 'inhaler', 'patch', 'sachet',
+  ])
+
+  // exactMap: lowered name → id (for exact matches)
+  const exactMap = new Map<string, string>()
+  // suffixMap: lowered name WITHOUT suffix → id (for "AFENAK PLUS" → "AFENAK PLUS Tablet")
+  const suffixMap = new Map<string, string>()
+
   for (const m of medicines ?? []) {
-    medMap.set(m.name.toLowerCase().trim(), m.id)
+    const lower = m.name.toLowerCase().trim()
+    exactMap.set(lower, m.id)
+
+    // If DB name ends with a known suffix, also index the stripped version
+    // "afenak plus tablet" → suffixMap["afenak plus"] = id
+    const lastSpace = lower.lastIndexOf(' ')
+    if (lastSpace > 0) {
+      const lastWord = lower.slice(lastSpace + 1)
+      if (KNOWN_SUFFIXES.has(lastWord)) {
+        const stripped = lower.slice(0, lastSpace)
+        // Only store first match to avoid ambiguity (e.g. don't overwrite)
+        if (!suffixMap.has(stripped)) {
+          suffixMap.set(stripped, m.id)
+        }
+      }
+    }
   }
 
-  // Auto-create any medicines from the stock file that are missing in the catalogue.
-  // Collect unique missing names first to avoid redundant inserts.
-  const missingNames = [
-    ...new Set(
-      rows
-        .map((r) => r.medicine_name.trim())
-        .filter((name) => !medMap.has(name.toLowerCase())),
-    ),
-  ]
+  /**
+   * Resolve an Excel medicine name to an existing medicine ID.
+   * Strategy:
+   *   1. Exact match:  "AFENAK PLUS" → "AFENAK PLUS"
+   *   2. Suffix match: "AFENAK PLUS" → "AFENAK PLUS Tablet" (safe, known suffix)
+   *   3. Doubled name: "DYNAFIX" → "DYNAFIX  DYNAFIX" (legacy double-paste)
+   */
+  function findMedicineId(excelName: string): string | undefined {
+    const lower = excelName.toLowerCase().trim()
+    // 1. Exact match
+    const exact = exactMap.get(lower)
+    if (exact) return exact
+    // 2. Suffix match: Excel "afenak plus" → DB "afenak plus tablet"
+    const suffix = suffixMap.get(lower)
+    if (suffix) return suffix
+    // 3. Doubled name match: Excel "dynafix" → DB "dynafix  dynafix"
+    const doubled = exactMap.get(lower + '  ' + lower)
+    if (doubled) return doubled
+    return undefined
+  }
 
+  // Collect unique Excel names that have no match in the catalogue
+  const excelNames = [...new Set(rows.map((r) => r.medicine_name.trim()))]
+  const missingNames = excelNames.filter((name) => !findMedicineId(name))
+
+  // Auto-create missing medicines (ones not in catalogue at all)
   if (missingNames.length > 0) {
     const toCreate = missingNames.map((name) => ({
       branch_id:     branchId,
@@ -197,7 +284,8 @@ export async function prepareStockBatchImportAction(
         .insert(toCreate.slice(i, i + 200))
         .select('id, name')
       for (const m of created ?? []) {
-        medMap.set(m.name.toLowerCase().trim(), m.id)
+        const lower = m.name.toLowerCase().trim()
+        exactMap.set(lower, m.id)
       }
     }
   }
@@ -207,7 +295,7 @@ export async function prepareStockBatchImportAction(
   const notFound: string[] = []
 
   for (const row of rows) {
-    const medicineId = medMap.get(row.medicine_name.toLowerCase().trim())
+    const medicineId = findMedicineId(row.medicine_name)
     if (!medicineId) {
       // Still not found after auto-create attempt (insert may have failed)
       if (!notFound.includes(row.medicine_name)) notFound.push(row.medicine_name)
@@ -248,4 +336,5 @@ export async function insertStockBatchAction(
 
 export async function finalizeStockImportAction(): Promise<void> {
   revalidatePath('/stock')
+  revalidatePath('/medicines')
 }

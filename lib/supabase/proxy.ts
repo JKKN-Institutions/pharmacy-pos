@@ -2,13 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  // Guard: if Supabase env vars are missing, redirect to login rather than crashing
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-
   const { pathname } = request.nextUrl
 
   // Skip Supabase session refresh for public routes — prevents network errors
@@ -19,6 +12,14 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = ['/login', '/auth/callback', '/manifest.webmanifest', '/sw.js', '/offline']
   if (publicRoutes.includes(pathname)) {
     return NextResponse.next({ request })
+  }
+
+  // Guard: if Supabase env vars are missing, redirect to login rather than crashing.
+  // This check must come AFTER the public routes check to avoid a redirect loop on /login.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
 
   let supabaseResponse = NextResponse.next({ request })

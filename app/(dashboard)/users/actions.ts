@@ -11,7 +11,6 @@ const userSchema = z.object({
   phone: z.string().optional(),
   role: z.enum(['admin', 'manager', 'pharmacist', 'cashier']),
   branch_id: z.string().min(1, 'Branch is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
 })
 
 export async function createUserAction(formData: FormData) {
@@ -21,7 +20,6 @@ export async function createUserAction(formData: FormData) {
     phone: formData.get('phone') as string || undefined,
     role: formData.get('role') as string,
     branch_id: formData.get('branch_id') as string,
-    password: formData.get('password') as string,
   }
 
   const parsed = userSchema.safeParse(raw)
@@ -34,7 +32,6 @@ export async function createUserAction(formData: FormData) {
 
   const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
     email: parsed.data.email,
-    password: parsed.data.password,
     email_confirm: true,
   })
 

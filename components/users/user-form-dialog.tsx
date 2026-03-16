@@ -38,7 +38,6 @@ const schema = z.object({
   phone: z.string().optional(),
   role: z.enum(['admin', 'manager', 'pharmacist', 'cashier']),
   branch_id: z.string().min(1, 'Branch is required'),
-  password: z.string().min(8),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -60,7 +59,6 @@ export function UserFormDialog({ branches }: UserFormDialogProps) {
       phone: '',
       role: 'cashier',
       branch_id: branches.length === 1 ? branches[0].id : '',
-      password: '',
     },
   })
 
@@ -173,19 +171,6 @@ export function UserFormDialog({ branches }: UserFormDialogProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Initial Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" placeholder="Min 8 characters" {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

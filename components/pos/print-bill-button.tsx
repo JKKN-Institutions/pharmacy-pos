@@ -187,9 +187,13 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
   )
 }
 
-/** INR formatter for HTML context */
+/** INR formatter for HTML context (Indian grouping: last 3 digits, then pairs of 2) */
 function fmtINR(n: number) {
   const [int, dec] = n.toFixed(2).split('.')
-  const formatted = int.replace(/(\d)(?=(\d{2})+$)/g, '$1,')
-  return `₹${formatted}.${dec}`
+  let lastThree = int.slice(-3)
+  const rest = int.slice(0, -3)
+  if (rest) {
+    lastThree = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree
+  }
+  return `₹${lastThree}.${dec}`
 }

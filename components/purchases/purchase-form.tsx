@@ -414,23 +414,23 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
           </div>
 
           <div className="rounded-lg border overflow-x-auto">
-            <table className="w-full text-sm border-collapse min-w-[1100px]">
+            <table className="w-full text-sm border-collapse min-w-[1350px]">
               <thead>
                 <tr className="bg-muted/50">
-                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground w-8">#</th>
-                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[200px]">Medicine *</th>
-                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[90px]">Batch *</th>
-                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[120px]">Expiry *</th>
-                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[70px]">Pack</th>
-                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[70px]">Qty *</th>
-                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[60px]">Free</th>
-                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[60px]">Total</th>
-                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[90px]">P.Price *</th>
-                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[90px]">S.Price *</th>
-                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[110px]">Discount</th>
-                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[65px]">Tax%</th>
-                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[90px]">Amount</th>
-                  <th className="w-9 px-1"></th>
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground w-10">#</th>
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[220px]">Medicine *</th>
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[100px]">Batch *</th>
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[130px]">Expiry *</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[75px]">Pack</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[75px]">Qty *</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[65px]">Free</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[65px]">Total</th>
+                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[100px]">P.Price *</th>
+                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[100px]">S.Price *</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[130px]">Discount</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[70px]">Tax%</th>
+                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[100px]">Amount</th>
+                  <th className="w-10 px-1"></th>
                 </tr>
               </thead>
               <tbody>
@@ -475,12 +475,12 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
                       )} />
                     </td>
 
-                    {/* Expiry */}
+                    {/* Expiry (month/year only) */}
                     <td className="px-2 py-2">
                       <FormField control={form.control} name={`items.${index}.expiry_date`} render={({ field }) => (
                         <FormItem className="space-y-0">
                           <FormControl>
-                            <Input className="h-8 text-sm" type="date" {...field} />
+                            <Input className="h-8 text-sm" type="month" {...field} />
                           </FormControl>
                           <FormMessage className="text-[10px] mt-1" />
                         </FormItem>

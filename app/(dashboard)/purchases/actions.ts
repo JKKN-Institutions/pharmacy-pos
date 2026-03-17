@@ -4,6 +4,15 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 
+/** Convert YYYY-MM (from month picker) to YYYY-MM-01 for PostgreSQL DATE column */
+function normalizeExpiryDate(d: string): string {
+  // Already full date (YYYY-MM-DD) — return as-is
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d
+  // Month format (YYYY-MM) — append first day
+  if (/^\d{4}-\d{2}$/.test(d)) return `${d}-01`
+  return d
+}
+
 export interface PurchaseItemInput {
   medicine_id: string
   batch_no: string
@@ -69,7 +78,7 @@ export async function createPurchaseAction(data: {
       purchase_id:    purchase.id,
       medicine_id:    item.medicine_id,
       batch_no:       item.batch_no,
-      expiry_date:    item.expiry_date,
+      expiry_date:    normalizeExpiryDate(item.expiry_date),
       packing_qty:    item.packing_qty,
       quantity:       item.quantity,
       free_qty:       item.free_qty,
@@ -94,7 +103,7 @@ export async function createPurchaseAction(data: {
       medicine_id: item.medicine_id,
       purchase_id: purchase.id,
       batch_no: item.batch_no,
-      expiry_date: item.expiry_date,
+      expiry_date: normalizeExpiryDate(item.expiry_date),
       purchase_price: item.purchase_price,
       sale_price: item.sale_price,
       initial_qty: item.total_qty,
@@ -196,7 +205,7 @@ export async function updatePurchaseAction(
       purchase_id:    purchaseId,
       medicine_id:    item.medicine_id,
       batch_no:       item.batch_no,
-      expiry_date:    item.expiry_date,
+      expiry_date:    normalizeExpiryDate(item.expiry_date),
       packing_qty:    item.packing_qty,
       quantity:       item.quantity,
       free_qty:       item.free_qty,
@@ -217,7 +226,7 @@ export async function updatePurchaseAction(
       medicine_id:    item.medicine_id,
       purchase_id:    purchaseId,
       batch_no:       item.batch_no,
-      expiry_date:    item.expiry_date,
+      expiry_date:    normalizeExpiryDate(item.expiry_date),
       purchase_price: item.purchase_price,
       sale_price:     item.sale_price,
       initial_qty:    item.total_qty,

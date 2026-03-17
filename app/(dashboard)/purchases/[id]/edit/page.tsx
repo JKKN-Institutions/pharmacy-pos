@@ -76,7 +76,7 @@ export default async function EditPurchasePage({
     items: (items ?? []).map(item => ({
       medicine_id: item.medicine_id,
       batch_no: item.batch_no,
-      expiry_date: item.expiry_date,
+      expiry_date: item.expiry_date?.slice(0, 7),  // YYYY-MM-DD → YYYY-MM for month picker
       packing_qty: Number(item.packing_qty) || 1,
       quantity: Number(item.quantity) || 0,
       free_qty: Number(item.free_qty) || 0,

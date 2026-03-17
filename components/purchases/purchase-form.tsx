@@ -398,7 +398,7 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
           </CardContent>
         </Card>
 
-        {/* Line Items — card-based layout (no horizontal scroll) */}
+        {/* Line Items — table layout */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -413,191 +413,242 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
             </Button>
           </div>
 
-          {fields.map((field, index) => (
-            <Card key={field.id} className="relative">
-              <CardContent className="pt-5 pb-4">
-                {/* Item number badge + delete */}
-                <div className="flex items-center justify-between mb-3">
-                  <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-green-600 text-white text-xs font-bold">
-                    {index + 1}
-                  </span>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => remove(index)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    <span className="text-xs">Remove</span>
-                  </Button>
-                </div>
+          <div className="rounded-lg border overflow-x-auto">
+            <table className="w-full text-sm border-collapse min-w-[1100px]">
+              <thead>
+                <tr className="bg-muted/50">
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground w-8">#</th>
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[200px]">Medicine *</th>
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[90px]">Batch *</th>
+                  <th className="text-left px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[120px]">Expiry *</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[70px]">Pack</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[70px]">Qty *</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[60px]">Free</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[60px]">Total</th>
+                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[90px]">P.Price *</th>
+                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[90px]">S.Price *</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground min-w-[110px]">Discount</th>
+                  <th className="text-center px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[65px]">Tax%</th>
+                  <th className="text-right px-2 py-2.5 text-xs font-semibold text-muted-foreground w-[90px]">Amount</th>
+                  <th className="w-9 px-1"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {fields.map((field, index) => (
+                  <tr key={field.id} className="border-t hover:bg-muted/30 align-top">
+                    {/* # */}
+                    <td className="px-2 py-2">
+                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-green-600 text-white text-xs font-bold">
+                        {index + 1}
+                      </span>
+                    </td>
 
-                {/* Row 1: Medicine Name (full width) */}
-                <div className="mb-3">
-                  <FormField control={form.control} name={`items.${index}.medicine_id`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">Medicine Name *</FormLabel>
-                      <FormControl>
-                        <MedicineCombobox
-                          medicines={medicines}
-                          value={field.value}
-                          onValueChange={(id, taxPercent) => {
-                            field.onChange(id)
-                            form.setValue(`items.${index}.tax`, taxPercent, { shouldDirty: true })
-                            recalcItem(index)
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
-
-                {/* Row 2: Batch, Expiry, Packing Qty, Quantity, Total Qty */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-3">
-                  <FormField control={form.control} name={`items.${index}.batch_no`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">Batch No *</FormLabel>
-                      <FormControl>
-                        <Input className="h-9 text-sm" placeholder="BN001" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  <FormField control={form.control} name={`items.${index}.expiry_date`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">Expiry Date *</FormLabel>
-                      <FormControl>
-                        <Input className="h-9 text-sm" type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  <FormField control={form.control} name={`items.${index}.packing_qty`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">Pack Qty</FormLabel>
-                      <FormControl>
-                        <Input
-                          className="h-9 text-sm"
-                          type="number"
-                          min="1"
-                          {...field}
-                          onChange={e => { field.onChange(e); recalcItem(index) }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )} />
-
-                  <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">Quantity *</FormLabel>
-                      <FormControl>
-                        <Input
-                          className="h-9 text-sm"
-                          type="number"
-                          min="1"
-                          {...field}
-                          onChange={e => { field.onChange(e); recalcItem(index) }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-2">Total Qty</span>
-                    <div className="h-9 flex items-center px-3 rounded-md bg-muted text-sm tabular-nums font-medium">
-                      {watchedItems[index]
-                        ? (Number(watchedItems[index].packing_qty) || 1) * (Number(watchedItems[index].quantity) || 0)
-                        : 0}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 3: Purchase Price, Sale Price, Discount, Tax, Price */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                  <FormField control={form.control} name={`items.${index}.purchase_price`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">Purchase Price *</FormLabel>
-                      <FormControl>
-                        <Input
-                          className="h-9 text-sm"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          {...field}
-                          onChange={e => { field.onChange(e); recalcItem(index) }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-
-                  <FormField control={form.control} name={`items.${index}.sale_price`} render={({ field }) => {
-                    const medicineId = watchedItems[index]?.medicine_id
-                    const suggestedPrice = medicineId ? lastSalePrices[medicineId] : undefined
-                    const currentVal = Number(field.value) || 0
-                    const showSuggestion = suggestedPrice && suggestedPrice > 0 && currentVal !== suggestedPrice
-                    return (
-                      <FormItem>
-                        <FormLabel className="text-xs text-muted-foreground">Sale Price *</FormLabel>
-                        <FormControl>
-                          <Input
-                            className="h-9 text-sm"
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            {...field}
-                          />
-                        </FormControl>
-                        {loadingPrices && medicineId && (
-                          <span className="inline-flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                            <Loader2 className="h-3 w-3 animate-spin" /> Loading…
-                          </span>
-                        )}
-                        {showSuggestion && (
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 text-xs rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-950/60 transition-colors cursor-pointer"
-                            onClick={() => field.onChange(suggestedPrice)}
-                          >
-                            Previous: ₹{suggestedPrice} — click to apply
-                          </button>
-                        )}
-                      </FormItem>
-                    )
-                  }} />
-
-                  {/* Discount — type + value side by side */}
-                  <FormItem>
-                    <FormLabel className="text-xs text-muted-foreground">Discount</FormLabel>
-                    <div className="flex items-center gap-1">
-                      <FormField control={form.control} name={`items.${index}.discount_type`} render={({ field }) => (
-                        <FormItem className="m-0">
-                          <Select
-                            value={field.value}
-                            onValueChange={v => { field.onChange(v); recalcItem(index) }}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-14 h-9 px-2 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="percent">%</SelectItem>
-                              <SelectItem value="flat">₹</SelectItem>
-                            </SelectContent>
-                          </Select>
+                    {/* Medicine */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.medicine_id`} render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <MedicineCombobox
+                              medicines={medicines}
+                              value={field.value}
+                              onValueChange={(id, taxPercent) => {
+                                field.onChange(id)
+                                form.setValue(`items.${index}.tax`, taxPercent, { shouldDirty: true })
+                                recalcItem(index)
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px] mt-1" />
                         </FormItem>
                       )} />
-                      <FormField control={form.control} name={`items.${index}.discount_value`} render={({ field }) => (
-                        <FormItem className="m-0 flex-1">
+                    </td>
+
+                    {/* Batch */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.batch_no`} render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <Input className="h-8 text-sm" placeholder="BN001" {...field} />
+                          </FormControl>
+                          <FormMessage className="text-[10px] mt-1" />
+                        </FormItem>
+                      )} />
+                    </td>
+
+                    {/* Expiry */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.expiry_date`} render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <Input className="h-8 text-sm" type="date" {...field} />
+                          </FormControl>
+                          <FormMessage className="text-[10px] mt-1" />
+                        </FormItem>
+                      )} />
+                    </td>
+
+                    {/* Pack Qty */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.packing_qty`} render={({ field }) => (
+                        <FormItem className="space-y-0">
                           <FormControl>
                             <Input
-                              className="h-9 text-sm"
+                              className="h-8 text-sm text-center no-spinner"
+                              type="number"
+                              min="1"
+                              {...field}
+                              onChange={e => { field.onChange(e); recalcItem(index) }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )} />
+                    </td>
+
+                    {/* Quantity */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.quantity`} render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <Input
+                              className="h-8 text-sm text-center no-spinner"
+                              type="number"
+                              min="1"
+                              {...field}
+                              onChange={e => { field.onChange(e); recalcItem(index) }}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px] mt-1" />
+                        </FormItem>
+                      )} />
+                    </td>
+
+                    {/* Free Qty */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.free_qty`} render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <Input
+                              className="h-8 text-sm text-center no-spinner"
+                              type="number"
+                              min="0"
+                              {...field}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )} />
+                    </td>
+
+                    {/* Total Qty (computed) */}
+                    <td className="px-2 py-2">
+                      <div className="h-8 flex items-center justify-center rounded-md bg-muted text-sm tabular-nums font-medium">
+                        {watchedItems[index]
+                          ? (Number(watchedItems[index].packing_qty) || 1) * (Number(watchedItems[index].quantity) || 0)
+                          : 0}
+                      </div>
+                    </td>
+
+                    {/* Purchase Price */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.purchase_price`} render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <Input
+                              className="h-8 text-sm text-right no-spinner"
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              {...field}
+                              onChange={e => { field.onChange(e); recalcItem(index) }}
+                            />
+                          </FormControl>
+                          <FormMessage className="text-[10px] mt-1" />
+                        </FormItem>
+                      )} />
+                    </td>
+
+                    {/* Sale Price */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.sale_price`} render={({ field }) => {
+                        const medicineId = watchedItems[index]?.medicine_id
+                        const suggestedPrice = medicineId ? lastSalePrices[medicineId] : undefined
+                        const currentVal = Number(field.value) || 0
+                        const showSuggestion = suggestedPrice && suggestedPrice > 0 && currentVal !== suggestedPrice
+                        return (
+                          <FormItem className="space-y-0">
+                            <FormControl>
+                              <Input
+                                className="h-8 text-sm text-right no-spinner"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                {...field}
+                              />
+                            </FormControl>
+                            {loadingPrices && medicineId && (
+                              <span className="inline-flex items-center gap-1 mt-1 text-[10px] text-muted-foreground">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              </span>
+                            )}
+                            {showSuggestion && (
+                              <button
+                                type="button"
+                                className="mt-1 text-[10px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer whitespace-nowrap"
+                                onClick={() => field.onChange(suggestedPrice)}
+                              >
+                                Prev: ₹{suggestedPrice}
+                              </button>
+                            )}
+                          </FormItem>
+                        )
+                      }} />
+                    </td>
+
+                    {/* Discount (type + value) */}
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-0.5">
+                        <FormField control={form.control} name={`items.${index}.discount_type`} render={({ field }) => (
+                          <FormItem className="space-y-0">
+                            <Select
+                              value={field.value}
+                              onValueChange={v => { field.onChange(v); recalcItem(index) }}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-12 h-8 px-1.5 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="percent">%</SelectItem>
+                                <SelectItem value="flat">₹</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )} />
+                        <FormField control={form.control} name={`items.${index}.discount_value`} render={({ field }) => (
+                          <FormItem className="space-y-0 flex-1">
+                            <FormControl>
+                              <Input
+                                className="h-8 text-sm text-right no-spinner"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                placeholder="0"
+                                {...field}
+                                onChange={e => { field.onChange(e); recalcItem(index) }}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )} />
+                      </div>
+                    </td>
+
+                    {/* Tax % */}
+                    <td className="px-2 py-2">
+                      <FormField control={form.control} name={`items.${index}.tax`} render={({ field }) => (
+                        <FormItem className="space-y-0">
+                          <FormControl>
+                            <Input
+                              className="h-8 text-sm text-center no-spinner"
                               type="number"
                               step="0.01"
                               min="0"
@@ -608,49 +659,33 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
                           </FormControl>
                         </FormItem>
                       )} />
-                    </div>
-                  </FormItem>
+                    </td>
 
-                  <FormField control={form.control} name={`items.${index}.tax`} render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs text-muted-foreground">Tax %</FormLabel>
-                      <FormControl>
-                        <Input
-                          id={`tax-${index}`}
-                          className="h-9 text-sm"
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0"
-                          {...field}
-                          onChange={e => { field.onChange(e); recalcItem(index) }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )} />
+                    {/* Amount (computed) */}
+                    <td className="px-2 py-2">
+                      <div className="h-8 flex items-center justify-end px-2 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-sm tabular-nums font-semibold text-green-700 dark:text-green-400 whitespace-nowrap">
+                        {formatINR(watchedItems[index]?.price || 0)}
+                      </div>
+                    </td>
 
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-2">Amount</span>
-                    <div className="h-9 flex items-center justify-end px-3 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 text-sm tabular-nums font-semibold text-green-700 dark:text-green-400">
-                      ₹{Number((watchedItems[index]?.price || 0).toFixed(2))}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    {/* Delete */}
+                    <td className="px-1 py-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => remove(index)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-          {/* Add Item at bottom too */}
-          {fields.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-dashed border-2 text-green-600 hover:text-green-700 hover:border-green-300 hover:bg-green-50/50"
-              onClick={() => append(defaultItem)}
-            >
-              <Plus className="w-4 h-4 mr-1.5" />Add Another Item
-            </Button>
-          )}
         </div>
 
         {/* Summary — right-aligned, plain decimal numbers matching reference */}

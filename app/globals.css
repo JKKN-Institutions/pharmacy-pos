@@ -164,6 +164,16 @@
   }
 }
 
+/* Hide number input spin buttons */
+input.no-spinner::-webkit-outer-spin-button,
+input.no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input.no-spinner {
+  -moz-appearance: textfield;
+}
+
 /* ── Login page animations ── */
 @keyframes slide-from-left {
   from { transform: translateX(-80px); opacity: 0; }

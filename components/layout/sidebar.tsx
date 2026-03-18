@@ -63,7 +63,7 @@ const financeItems: NavItem[] = [
   { href: '/expenses', icon: DollarSign, label: 'Expenses', roles: ['admin', 'manager'] },
   { href: '/salary',   icon: Receipt,    label: 'Salary',   roles: ['admin', 'manager'] },
   { href: '/accounts', icon: BookOpen,   label: 'Accounts', roles: ['admin', 'manager'] },
-  { href: '/reports',  icon: BarChart3,  label: 'Reports',  roles: ['admin', 'manager'] },
+  { href: '/reports',  icon: BarChart3,  label: 'Reports',  roles: ['admin', 'manager', 'pharmacist'] },
 ]
 
 const settingsSubItems: SettingsSubItem[] = [

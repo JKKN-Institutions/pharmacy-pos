@@ -9,7 +9,10 @@ import { CustomerInfo } from './customer-info'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Wifi, WifiOff, RefreshCw, Save } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, Save, Eye, ArrowLeft, Pencil, User, Phone, Mail, Stethoscope, Calendar, CreditCard, StickyNote } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { formatINR } from '@/lib/utils/currency'
+import { format } from 'date-fns'
 import { calculateLineItem, calculateBillTotals } from '@/lib/utils/billing'
 import type { DiscountType } from '@/lib/types/database'
 
@@ -48,6 +51,7 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'credit'>('cash')
   const [note, setNote]                 = useState('')
   const [saving, setSaving]             = useState(false)
+  const [showPreview, setShowPreview]   = useState(false)
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
@@ -182,6 +186,201 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
     onSaved?.()
   }
 
+  /* ── Preview View ──────────────────────────────────────── */
+  if (showPreview) {
+    const paymentMethodLabels: Record<string, string> = {
+      cash: 'Cash', upi: 'UPI', card: 'Card', credit: 'Credit',
+    }
+    const methodColors: Record<string, string> = {
+      cash: 'text-green-700 dark:text-green-400',
+      upi: 'text-blue-700 dark:text-blue-400',
+      card: 'text-purple-700 dark:text-purple-400',
+      credit: 'text-amber-700 dark:text-amber-400',
+    }
+
+    return (
+      <div className="space-y-5">
+
+        {/* Preview header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary">
+              <Eye className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Bill Preview</h2>
+              <p className="text-sm text-muted-foreground">
+                Review the bill before saving
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPreview(false)}
+            className="h-8 gap-1.5"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Edit Bill
+          </Button>
+        </div>
+
+        {/* Customer & payment meta cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {customerName && (
+            <div className="rounded-lg border bg-muted/30 px-3 py-2">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <User className="w-3 h-3" /> Customer
+              </p>
+              <p className="text-sm font-semibold truncate">{customerName}</p>
+            </div>
+          )}
+          {customerPhone && (
+            <div className="rounded-lg border bg-muted/30 px-3 py-2">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Phone className="w-3 h-3" /> Phone
+              </p>
+              <p className="text-sm font-semibold">{customerPhone}</p>
+            </div>
+          )}
+          {doctor && (
+            <div className="rounded-lg border bg-muted/30 px-3 py-2">
+              <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                <Stethoscope className="w-3 h-3" /> Doctor
+              </p>
+              <p className="text-sm font-semibold truncate">{doctor}</p>
+            </div>
+          )}
+          <div className="rounded-lg border bg-muted/30 px-3 py-2">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <Calendar className="w-3 h-3" /> Date
+            </p>
+            <p className="text-sm font-semibold">
+              {format(new Date(billDate + 'T00:00:00'), 'dd MMM yyyy')}
+            </p>
+          </div>
+          <div className="rounded-lg border bg-muted/30 px-3 py-2">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <CreditCard className="w-3 h-3" /> Payment
+            </p>
+            <p className={`text-sm font-semibold ${methodColors[paymentMethod] ?? ''}`}>
+              {paymentMethodLabels[paymentMethod] ?? paymentMethod}
+            </p>
+          </div>
+        </div>
+
+        {/* Line items table */}
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
+              <thead>
+                <tr className="bg-muted/60 border-b">
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-10">#</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Medicine</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-24">Batch</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-20">Expiry</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-14">Qty</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-24">Price</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-20">Disc</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-16">Tax%</th>
+                  <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground w-28">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, i) => {
+                  const line = lineItemTotals[i]
+                  return (
+                    <tr key={item.id} className={`border-b last:border-0 ${i % 2 === 1 ? 'bg-muted/20' : ''}`}>
+                      <td className="px-4 py-2.5 text-muted-foreground text-xs">{i + 1}</td>
+                      <td className="px-4 py-2.5 font-medium whitespace-nowrap">{item.medicine_name}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{item.batch_no}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground text-xs">
+                        {format(new Date(item.expiry_date + 'T00:00:00'), 'MMM yyyy')}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums">{item.qty}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">{formatINR(item.sale_price)}</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">
+                        {item.discount_value > 0
+                          ? item.discount_type === 'percent'
+                            ? `${item.discount_value}%`
+                            : formatINR(item.discount_value)
+                          : '—'}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-muted-foreground">{item.tax}%</td>
+                      <td className="px-4 py-2.5 text-right tabular-nums font-semibold">{formatINR(line.price)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
+          <div className="border-t bg-muted/20 px-5 py-4">
+            <div className="flex justify-end">
+              <div className="w-72 space-y-1.5 text-sm">
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span className="tabular-nums">{formatINR(totals.subtotal)}</span>
+                </div>
+                {totals.discount_total > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Discount</span>
+                    <span className="tabular-nums text-red-500">− {formatINR(totals.discount_total)}</span>
+                  </div>
+                )}
+                {totals.tax_total > 0 && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Tax</span>
+                    <span className="tabular-nums">+ {formatINR(totals.tax_total)}</span>
+                  </div>
+                )}
+                <Separator />
+                <div className="flex justify-between font-bold text-lg pt-1">
+                  <span>Total</span>
+                  <span className="tabular-nums text-primary">{formatINR(totals.total)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Note */}
+        {note && (
+          <div className="rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2">
+            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+              <StickyNote className="w-3 h-3" /> Note
+            </p>
+            <p className="text-sm">{note}</p>
+          </div>
+        )}
+
+        {/* Preview actions */}
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 pt-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowPreview(false)}
+            disabled={saving}
+            className="w-full sm:w-auto gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Edit Bill
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            size="lg"
+            className="w-full sm:w-44 gap-2"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving...' : 'Confirm & Save'}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Form View (default) ──────────────────────────────── */
   return (
     <div className="space-y-4">
 
@@ -240,24 +439,29 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
         note={note}                   onNoteChange={setNote}
       />
 
-      {/* ── Save / Cancel actions (centered Save like template) */}
+      {/* ── Review / Cancel actions ──────────────────────── */}
       <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 pt-2">
         <Button
           variant="outline"
           onClick={() => { clearBill(); onCancel?.() }}
-          disabled={saving}
           className="w-full sm:w-auto"
         >
           Cancel
         </Button>
         <Button
-          onClick={handleSave}
-          disabled={saving || items.length === 0}
+          onClick={() => {
+            if (items.length === 0) {
+              toast.error('Add at least one item to generate a bill')
+              return
+            }
+            setShowPreview(true)
+          }}
+          disabled={items.length === 0}
           size="lg"
-          className="w-full sm:w-40 gap-2"
+          className="w-full sm:w-44 gap-2"
         >
-          <Save className="w-4 h-4" />
-          {saving ? 'Saving...' : 'Save'}
+          <Eye className="w-4 h-4" />
+          Review Bill
         </Button>
       </div>
 

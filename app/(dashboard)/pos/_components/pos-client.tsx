@@ -9,12 +9,17 @@ import { CustomerInfo } from './customer-info'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { Wifi, WifiOff, RefreshCw, Save, Eye, ArrowLeft, Pencil, User, Phone, Mail, Stethoscope, Calendar, CreditCard, StickyNote } from 'lucide-react'
+import {
+  Wifi, WifiOff, RefreshCw, Save, CheckCircle2, Plus,
+  User, Phone, Stethoscope, Calendar, CreditCard, StickyNote,
+} from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { formatINR } from '@/lib/utils/currency'
 import { format } from 'date-fns'
 import { calculateLineItem, calculateBillTotals } from '@/lib/utils/billing'
-import type { DiscountType } from '@/lib/types/database'
+import { PrintBillButton } from '@/components/pos/print-bill-button'
+import { DownloadBillButton } from '@/components/pos/download-bill-button'
+import type { DiscountType, PosBill } from '@/lib/types/database'
 
 export interface BillItem {
   id: string
@@ -30,6 +35,11 @@ export interface BillItem {
   discount_value: number
   tax: number
   price: number
+}
+
+interface SavedBillInfo {
+  bill: PosBill
+  items: BillItem[]
 }
 
 interface PosFormProps {
@@ -51,7 +61,7 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'credit'>('cash')
   const [note, setNote]                 = useState('')
   const [saving, setSaving]             = useState(false)
-  const [showPreview, setShowPreview]   = useState(false)
+  const [savedBill, setSavedBill]       = useState<SavedBillInfo | null>(null)
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
@@ -123,6 +133,11 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
     setBillDate(new Date().toISOString().split('T')[0])
     setNote('')
     setPaymentMethod('cash')
+    setSavedBill(null)
+  }
+
+  function handleNewBill() {
+    clearBill()
   }
 
   async function handleSave() {
@@ -159,8 +174,35 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
         const responseData = await res.json()
         if (res.ok) {
           toast.success(`Bill ${responseData.bill_no} saved!`)
-          clearBill()
-          onSaved?.()
+          // Build a PosBill object for the preview (print/download need it)
+          const now = new Date().toISOString()
+          const bill: PosBill = {
+            id:             responseData.id,
+            branch_id:      branchId ?? '',
+            bill_no:        responseData.bill_no,
+            customer_id:    null,
+            customer_name:  customerName  || null,
+            customer_phone: customerPhone || null,
+            customer_email: customerEmail || null,
+            doctor:         doctor        || null,
+            bill_date:      billDate,
+            subtotal:       totals.subtotal,
+            discount_total: totals.discount_total,
+            tax_total:      totals.tax_total,
+            total:          totals.total,
+            paid:           totals.total,
+            due:            0,
+            payment_method: paymentMethod,
+            status:         'saved',
+            note:           note || null,
+            cancel_reason:  null,
+            cancelled_at:   null,
+            cancelled_by:   null,
+            created_by:     userId ?? '',
+            created_at:     now,
+            updated_at:     now,
+          }
+          setSavedBill({ bill, items: [...items] })
         } else {
           toast.error(responseData.error ?? 'Failed to save bill')
         }
@@ -186,8 +228,9 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
     onSaved?.()
   }
 
-  /* ── Preview View ──────────────────────────────────────── */
-  if (showPreview) {
+  /* ── Saved Bill Preview ──────────────────────────────────── */
+  if (savedBill) {
+    const { bill, items: savedItems } = savedBill
     const paymentMethodLabels: Record<string, string> = {
       cash: 'Cash', upi: 'UPI', card: 'Card', credit: 'Credit',
     }
@@ -197,58 +240,62 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
       card: 'text-purple-700 dark:text-purple-400',
       credit: 'text-amber-700 dark:text-amber-400',
     }
+    const previewTotals = savedItems.map((item) =>
+      calculateLineItem({
+        qty: item.qty,
+        unit_price: item.sale_price,
+        discount_type: item.discount_type,
+        discount_value: item.discount_value,
+        tax: item.tax,
+      })
+    )
 
     return (
       <div className="space-y-5">
 
-        {/* Preview header */}
+        {/* Success header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary/10 text-primary">
-              <Eye className="h-5 w-5" />
+            <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+              <CheckCircle2 className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Bill Preview</h2>
+              <h2 className="text-lg font-bold">Bill Saved</h2>
               <p className="text-sm text-muted-foreground">
-                Review the bill before saving
+                <span className="font-mono font-semibold text-foreground">{bill.bill_no}</span>
+                {' '}— {format(new Date(bill.bill_date + 'T00:00:00'), 'dd MMM yyyy')}
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowPreview(false)}
-            className="h-8 gap-1.5"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            Edit Bill
-          </Button>
+          <Badge variant="outline" className="gap-1.5 text-green-700 border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400">
+            <CheckCircle2 className="w-3 h-3" /> Saved
+          </Badge>
         </div>
 
         {/* Customer & payment meta cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {customerName && (
+          {bill.customer_name && (
             <div className="rounded-lg border bg-muted/30 px-3 py-2">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <User className="w-3 h-3" /> Customer
               </p>
-              <p className="text-sm font-semibold truncate">{customerName}</p>
+              <p className="text-sm font-semibold truncate">{bill.customer_name}</p>
             </div>
           )}
-          {customerPhone && (
+          {bill.customer_phone && (
             <div className="rounded-lg border bg-muted/30 px-3 py-2">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <Phone className="w-3 h-3" /> Phone
               </p>
-              <p className="text-sm font-semibold">{customerPhone}</p>
+              <p className="text-sm font-semibold">{bill.customer_phone}</p>
             </div>
           )}
-          {doctor && (
+          {bill.doctor && (
             <div className="rounded-lg border bg-muted/30 px-3 py-2">
               <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                 <Stethoscope className="w-3 h-3" /> Doctor
               </p>
-              <p className="text-sm font-semibold truncate">{doctor}</p>
+              <p className="text-sm font-semibold truncate">{bill.doctor}</p>
             </div>
           )}
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
@@ -256,15 +303,15 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
               <Calendar className="w-3 h-3" /> Date
             </p>
             <p className="text-sm font-semibold">
-              {format(new Date(billDate + 'T00:00:00'), 'dd MMM yyyy')}
+              {format(new Date(bill.bill_date + 'T00:00:00'), 'dd MMM yyyy')}
             </p>
           </div>
           <div className="rounded-lg border bg-muted/30 px-3 py-2">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               <CreditCard className="w-3 h-3" /> Payment
             </p>
-            <p className={`text-sm font-semibold ${methodColors[paymentMethod] ?? ''}`}>
-              {paymentMethodLabels[paymentMethod] ?? paymentMethod}
+            <p className={`text-sm font-semibold ${methodColors[bill.payment_method] ?? ''}`}>
+              {paymentMethodLabels[bill.payment_method] ?? bill.payment_method}
             </p>
           </div>
         </div>
@@ -287,8 +334,8 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, i) => {
-                  const line = lineItemTotals[i]
+                {savedItems.map((item, i) => {
+                  const line = previewTotals[i]
                   return (
                     <tr key={item.id} className={`border-b last:border-0 ${i % 2 === 1 ? 'bg-muted/20' : ''}`}>
                       <td className="px-4 py-2.5 text-muted-foreground text-xs">{i + 1}</td>
@@ -321,24 +368,24 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
               <div className="w-72 space-y-1.5 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span>
-                  <span className="tabular-nums">{formatINR(totals.subtotal)}</span>
+                  <span className="tabular-nums">{formatINR(bill.subtotal)}</span>
                 </div>
-                {totals.discount_total > 0 && (
+                {bill.discount_total > 0 && (
                   <div className="flex justify-between text-muted-foreground">
                     <span>Discount</span>
-                    <span className="tabular-nums text-red-500">− {formatINR(totals.discount_total)}</span>
+                    <span className="tabular-nums text-red-500">- {formatINR(bill.discount_total)}</span>
                   </div>
                 )}
-                {totals.tax_total > 0 && (
+                {bill.tax_total > 0 && (
                   <div className="flex justify-between text-muted-foreground">
                     <span>Tax</span>
-                    <span className="tabular-nums">+ {formatINR(totals.tax_total)}</span>
+                    <span className="tabular-nums">+ {formatINR(bill.tax_total)}</span>
                   </div>
                 )}
                 <Separator />
                 <div className="flex justify-between font-bold text-lg pt-1">
                   <span>Total</span>
-                  <span className="tabular-nums text-primary">{formatINR(totals.total)}</span>
+                  <span className="tabular-nums text-primary">{formatINR(bill.total)}</span>
                 </div>
               </div>
             </div>
@@ -346,34 +393,33 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
         </div>
 
         {/* Note */}
-        {note && (
+        {bill.note && (
           <div className="rounded-lg border bg-amber-50/50 dark:bg-amber-950/20 px-3 py-2">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
               <StickyNote className="w-3 h-3" /> Note
             </p>
-            <p className="text-sm">{note}</p>
+            <p className="text-sm">{bill.note}</p>
           </div>
         )}
 
-        {/* Preview actions */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 pt-2">
+        {/* Actions: Print, Download, New Bill, Back to Bills */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <PrintBillButton bill={bill} showLabel variant="outline" />
+          <DownloadBillButton bill={bill} showLabel variant="outline" />
           <Button
-            variant="outline"
-            onClick={() => setShowPreview(false)}
-            disabled={saving}
+            onClick={handleNewBill}
+            size="lg"
             className="w-full sm:w-auto gap-2"
           >
-            <ArrowLeft className="w-4 h-4" />
-            Edit Bill
+            <Plus className="w-4 h-4" />
+            New Bill
           </Button>
           <Button
-            onClick={handleSave}
-            disabled={saving}
-            size="lg"
-            className="w-full sm:w-44 gap-2"
+            variant="ghost"
+            onClick={() => { clearBill(); onSaved?.() }}
+            className="w-full sm:w-auto"
           >
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving...' : 'Confirm & Save'}
+            Back to Bills
           </Button>
         </div>
       </div>
@@ -439,29 +485,24 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
         note={note}                   onNoteChange={setNote}
       />
 
-      {/* ── Review / Cancel actions ──────────────────────── */}
+      {/* ── Save / Cancel actions ────────────────────────── */}
       <div className="flex flex-col-reverse sm:flex-row items-center justify-center gap-3 pt-2">
         <Button
           variant="outline"
           onClick={() => { clearBill(); onCancel?.() }}
+          disabled={saving}
           className="w-full sm:w-auto"
         >
           Cancel
         </Button>
         <Button
-          onClick={() => {
-            if (items.length === 0) {
-              toast.error('Add at least one item to generate a bill')
-              return
-            }
-            setShowPreview(true)
-          }}
-          disabled={items.length === 0}
+          onClick={handleSave}
+          disabled={saving || items.length === 0}
           size="lg"
-          className="w-full sm:w-44 gap-2"
+          className="w-full sm:w-40 gap-2"
         >
-          <Eye className="w-4 h-4" />
-          Review Bill
+          <Save className="w-4 h-4" />
+          {saving ? 'Saving...' : 'Save'}
         </Button>
       </div>
 

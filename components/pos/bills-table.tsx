@@ -112,9 +112,10 @@ const columnLabels: Record<string, string> = {
 interface BillsTableProps {
   initialData: PosBill[]
   initialTotalCount: number
+  onEditBill?: (bill: PosBill, items: any[]) => void
 }
 
-export function BillsTable({ initialData, initialTotalCount }: BillsTableProps) {
+export function BillsTable({ initialData, initialTotalCount, onEditBill }: BillsTableProps) {
   // ── Server-side state ──
   const [data, setData] = useState<PosBill[]>(initialData)
   const [totalCount, setTotalCount] = useState(initialTotalCount)
@@ -202,6 +203,7 @@ export function BillsTable({ initialData, initialTotalCount }: BillsTableProps) 
     onPaginationChange: setPagination,
     onColumnVisibilityChange: setColumnVisibility,
     state: { sorting, pagination, columnVisibility },
+    meta: { onEditBill },
   })
 
   const fromRow = totalCount === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1

@@ -47,6 +47,7 @@ export async function fetchAllActiveMedicines(
       .from('medicines')
       .select('id, name, company, unit, tax_percent')
       .eq('status', 'active')
-      .order('name'),
+      .order('name')
+      .order('id'),           // secondary sort — makes pagination deterministic at page boundaries
   )
 }

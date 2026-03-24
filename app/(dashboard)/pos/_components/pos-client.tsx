@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import {
   Wifi, WifiOff, RefreshCw, Save, CheckCircle2, Plus,
-  User, Phone, Stethoscope, Calendar, CreditCard, StickyNote,
+  User, Phone, Stethoscope, Calendar, CreditCard, StickyNote, Pencil,
 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 import { formatINR } from '@/lib/utils/currency'
@@ -42,26 +42,36 @@ interface SavedBillInfo {
   items: BillItem[]
 }
 
+export interface EditBillData {
+  bill: PosBill
+  items: BillItem[]
+}
+
 interface PosFormProps {
   userId?: string
   branchId?: string
   onSaved?: () => void
   onCancel?: () => void
+  editBill?: EditBillData | null
 }
 
-export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
+export function PosForm({ userId, branchId, onSaved, onCancel, editBill }: PosFormProps) {
   const [isOnline, setIsOnline]         = useState(true)
   const [isSyncing, setIsSyncing]       = useState(false)
-  const [items, setItems]               = useState<BillItem[]>([])
-  const [customerName, setCustomerName] = useState('')
-  const [customerEmail, setCustomerEmail] = useState('')
-  const [customerPhone, setCustomerPhone] = useState('')
-  const [doctor, setDoctor]             = useState('')
-  const [billDate, setBillDate]         = useState(() => new Date().toISOString().split('T')[0])
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'credit'>('cash')
-  const [note, setNote]                 = useState('')
+  const [items, setItems]               = useState<BillItem[]>(() => editBill?.items ?? [])
+  const [customerName, setCustomerName] = useState(() => editBill?.bill.customer_name ?? '')
+  const [customerEmail, setCustomerEmail] = useState(() => editBill?.bill.customer_email ?? '')
+  const [customerPhone, setCustomerPhone] = useState(() => editBill?.bill.customer_phone ?? '')
+  const [doctor, setDoctor]             = useState(() => editBill?.bill.doctor ?? '')
+  const [billDate, setBillDate]         = useState(() => editBill?.bill.bill_date ?? new Date().toISOString().split('T')[0])
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'upi' | 'card' | 'credit'>(() => (editBill?.bill.payment_method as any) ?? 'cash')
+  const [note, setNote]                 = useState(() => editBill?.bill.note ?? '')
   const [saving, setSaving]             = useState(false)
   const [savedBill, setSavedBill]       = useState<SavedBillInfo | null>(null)
+  const [editingBillId, setEditingBillId] = useState<{ id: string; bill_no: string; branch_id: string; created_by: string; created_at: string } | null>(
+    editBill ? { id: editBill.bill.id, bill_no: editBill.bill.bill_no, branch_id: editBill.bill.branch_id, created_by: editBill.bill.created_by, created_at: editBill.bill.created_at } : null
+  )
+  const isEditing                       = !!editingBillId
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
@@ -134,6 +144,7 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
     setNote('')
     setPaymentMethod('cash')
     setSavedBill(null)
+    setEditingBillId(null)
   }
 
   function handleNewBill() {
@@ -166,19 +177,20 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
 
     if (isOnline) {
       try {
+        const isUpdate = isEditing && editingBillId
         const res = await fetch('/api/pos/bills', {
-          method: 'POST',
+          method: isUpdate ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(billData),
+          body: JSON.stringify(isUpdate ? { ...billData, id: editingBillId.id } : billData),
         })
         const responseData = await res.json()
         if (res.ok) {
-          toast.success(`Bill ${responseData.bill_no} saved!`)
+          toast.success(`Bill ${responseData.bill_no} ${isUpdate ? 'updated' : 'saved'}!`)
           // Build a PosBill object for the preview (print/download need it)
           const now = new Date().toISOString()
           const bill: PosBill = {
             id:             responseData.id,
-            branch_id:      branchId ?? '',
+            branch_id:      editingBillId?.branch_id ?? branchId ?? '',
             bill_no:        responseData.bill_no,
             customer_id:    null,
             customer_name:  customerName  || null,
@@ -198,19 +210,29 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
             cancel_reason:  null,
             cancelled_at:   null,
             cancelled_by:   null,
-            created_by:     userId ?? '',
-            created_at:     now,
+            created_by:     editingBillId?.created_by ?? userId ?? '',
+            created_at:     editingBillId?.created_at ?? now,
             updated_at:     now,
           }
+          // Keep tracking this bill for further edits
+          setEditingBillId({ id: responseData.id, bill_no: responseData.bill_no, branch_id: bill.branch_id, created_by: bill.created_by, created_at: bill.created_at })
           setSavedBill({ bill, items: [...items] })
         } else {
-          toast.error(responseData.error ?? 'Failed to save bill')
+          toast.error(responseData.error ?? `Failed to ${isUpdate ? 'update' : 'save'} bill`)
         }
       } catch {
-        await queueOffline(billData)
+        if (!isEditing) {
+          await queueOffline(billData)
+        } else {
+          toast.error('Network error — editing requires internet connection')
+        }
       }
     } else {
-      await queueOffline(billData)
+      if (!isEditing) {
+        await queueOffline(billData)
+      } else {
+        toast.error('Cannot edit bills while offline')
+      }
     }
     setSaving(false)
   }
@@ -402,10 +424,30 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
           </div>
         )}
 
-        {/* Actions: Print, Download, New Bill, Back to Bills */}
+        {/* Actions: Print, Download, Edit, New Bill, Back to Bills */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <PrintBillButton bill={bill} showLabel variant="outline" />
           <DownloadBillButton bill={bill} showLabel variant="outline" />
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Re-enter edit mode with the saved bill data
+              setEditingBillId({ id: bill.id, bill_no: bill.bill_no, branch_id: bill.branch_id, created_by: bill.created_by, created_at: bill.created_at })
+              setItems([...savedItems])
+              setCustomerName(bill.customer_name ?? '')
+              setCustomerEmail(bill.customer_email ?? '')
+              setCustomerPhone(bill.customer_phone ?? '')
+              setDoctor(bill.doctor ?? '')
+              setBillDate(bill.bill_date)
+              setPaymentMethod((bill.payment_method as any) ?? 'cash')
+              setNote(bill.note ?? '')
+              setSavedBill(null)
+            }}
+            className="w-full sm:w-auto gap-2"
+          >
+            <Pencil className="w-4 h-4" />
+            Edit Bill
+          </Button>
           <Button
             onClick={handleNewBill}
             size="lg"
@@ -502,7 +544,7 @@ export function PosForm({ userId, branchId, onSaved, onCancel }: PosFormProps) {
           className="w-full sm:w-40 gap-2"
         >
           <Save className="w-4 h-4" />
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update' : 'Save')}
         </Button>
       </div>
 

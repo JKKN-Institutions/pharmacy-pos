@@ -307,6 +307,30 @@ export interface TaxRate {
   updated_at: string
 }
 
+// ─── Activity Logs ────────────────────────────────────────────────────────────
+
+export type ActivityAction =
+  | 'CREATE' | 'UPDATE' | 'DELETE' | 'CANCEL'
+  | 'LOGIN'  | 'LOGOUT' | 'EXPORT' | 'IMPORT'
+
+export type ActivityEntityType =
+  | 'medicine' | 'purchase' | 'pos_bill' | 'invoice'
+  | 'user'     | 'stock_batch' | 'expense' | 'salary'
+  | 'customer' | 'supplier' | 'medicine_category' | 'tax_rate'
+
+export interface ActivityLog {
+  id: string
+  branch_id: string | null
+  user_id: string | null
+  user_name: string
+  action: ActivityAction | string
+  entity_type: ActivityEntityType | string
+  entity_id: string | null
+  entity_label: string | null
+  details: Record<string, unknown> | null
+  created_at: string
+}
+
 // ─── System Settings ──────────────────────────────────────────────────────────
 
 export interface SystemSetting {

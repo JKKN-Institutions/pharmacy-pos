@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatINR } from '@/lib/utils/currency'
 import { BillsTable } from '@/components/pos/bills-table'
-import { PosForm } from './pos-client'
+import { PosForm, type EditBillData } from './pos-client'
 import { syncMedicines } from '@/lib/offline/sync'
 import type { PosBill } from '@/lib/types/database'
 
@@ -68,7 +68,8 @@ export function PosPageClient({
   todayRevenue,
   pendingCount,
 }: PosPageClientProps) {
-  const [view, setView] = useState<'history' | 'new-bill'>('history')
+  const [view, setView] = useState<'history' | 'new-bill' | 'edit-bill'>('history')
+  const [editBillData, setEditBillData] = useState<EditBillData | null>(null)
   const router = useRouter()
 
   // Pre-warm medicine catalog in IndexedDB so it's ready when the user starts billing
@@ -78,7 +79,46 @@ export function PosPageClient({
 
   function handleBillSaved() {
     setView('history')
+    setEditBillData(null)
     router.refresh()
+  }
+
+  function handleEditBill(bill: PosBill, items: any[]) {
+    setEditBillData({ bill, items })
+    setView('edit-bill')
+  }
+
+  /* ── Edit Bill View ─────────────────────────────────────── */
+  if (view === 'edit-bill' && editBillData) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Edit Bill</h1>
+            <p className="text-sm text-muted-foreground">
+              Editing <span className="font-mono font-semibold text-foreground">{editBillData.bill.bill_no}</span>
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setView('history'); setEditBillData(null) }}
+            className="h-8 gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to POS/Bill
+          </Button>
+        </div>
+        <PosForm
+          key={editBillData.bill.id}
+          userId={userId}
+          branchId={branchId}
+          onSaved={handleBillSaved}
+          onCancel={() => { setView('history'); setEditBillData(null) }}
+          editBill={editBillData}
+        />
+      </div>
+    )
   }
 
   /* ── New Bill View ──────────────────────────────────────── */
@@ -174,7 +214,7 @@ export function PosPageClient({
       </Button>
 
       {/* ── Bills table ───────────────────────────────────────────────────── */}
-      <BillsTable initialData={initialBills} initialTotalCount={initialTotalCount} />
+      <BillsTable initialData={initialBills} initialTotalCount={initialTotalCount} onEditBill={handleEditBill} />
 
     </div>
   )

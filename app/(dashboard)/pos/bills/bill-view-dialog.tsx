@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Eye, Loader2, Receipt } from 'lucide-react'
+import { Eye, Loader2, Receipt, Pencil } from 'lucide-react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
-import { getBillItemsAction } from './actions'
+import { getBillItemsAction, getBillItemsForEditAction } from './actions'
 import { formatINR } from '@/lib/utils/currency'
 import { DownloadBillButton } from '@/components/pos/download-bill-button'
 import { PrintBillButton } from '@/components/pos/print-bill-button'
@@ -42,12 +42,14 @@ const methodStyles: Record<string, string> = {
 
 interface BillViewDialogProps {
   bill: PosBill
+  onEdit?: (bill: PosBill, items: any[]) => void
 }
 
-export function BillViewDialog({ bill }: BillViewDialogProps) {
+export function BillViewDialog({ bill, onEdit }: BillViewDialogProps) {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<BillItem[] | null>(null)
   const [loading, setLoading] = useState(false)
+  const [editLoading, setEditLoading] = useState(false)
 
   async function handleOpen() {
     setOpen(true)
@@ -216,6 +218,26 @@ export function BillViewDialog({ bill }: BillViewDialogProps) {
             </div>
 
             <div className="flex justify-end gap-2">
+              {onEdit && bill.status !== 'cancelled' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={editLoading}
+                  onClick={async () => {
+                    setEditLoading(true)
+                    const result = await getBillItemsForEditAction(bill.id)
+                    setEditLoading(false)
+                    if (result.data) {
+                      setOpen(false)
+                      onEdit(bill, result.data)
+                    }
+                  }}
+                >
+                  {editLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                  Edit
+                </Button>
+              )}
               <PrintBillButton bill={bill} showLabel variant="outline" />
               <DownloadBillButton bill={bill} showLabel variant="outline" />
             </div>

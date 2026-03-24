@@ -142,6 +142,37 @@ export async function getBillItemsAction(billId: string) {
   return { data }
 }
 
+// ─── Fetch full bill items for editing ────────────────────────────────────────
+
+export async function getBillItemsForEditAction(billId: string) {
+  if (!billId) return { data: null, error: 'Bill ID is required' }
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('pos_bill_items')
+    .select('id, medicine_id, medicine_name, stock_batch_id, batch_no, expiry_date, qty, sale_price, discount_type, discount_value, tax, price')
+    .eq('bill_id', billId)
+    .order('id')
+
+  if (error) return { data: null, error: error.message }
+
+  // Also fetch available_qty for each batch (add back the sold qty from this bill)
+  if (data) {
+    for (const item of data as any[]) {
+      if (item.stock_batch_id) {
+        const { data: batch } = await supabase
+          .from('stock_batches')
+          .select('available_qty')
+          .eq('id', item.stock_batch_id)
+          .single()
+        // available_qty for editing = current available + what this bill consumed
+        item.available_qty = (batch?.available_qty ?? 0) + item.qty
+      }
+    }
+  }
+
+  return { data }
+}
+
 export async function cancelBillAction(id: string, reason: string) {
   if (!id) return { error: 'Bill ID is required' }
   if (!reason.trim()) return { error: 'Cancellation reason is required' }

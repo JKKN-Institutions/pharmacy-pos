@@ -117,7 +117,6 @@ export function MedicineSearch({ onAddItem, isSyncing = false }: MedicineSearchP
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm truncate">{medicine.name}</div>
-                    <div className="text-xs text-muted-foreground">{medicine.company ?? 'Unknown company'}</div>
                   </div>
                   {isOutOfStock && (
                     <Badge variant="destructive" className="text-xs shrink-0">Out of stock</Badge>

@@ -1,14 +1,50 @@
 'use client'
 
+import { useState } from 'react'
 import { ColumnDef, Column } from '@tanstack/react-table'
 import { format } from 'date-fns'
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowUpDown, ArrowUp, ArrowDown, Pencil, Loader2 } from 'lucide-react'
 import { formatINR } from '@/lib/utils/currency'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import type { PosBill } from '@/lib/types/database'
 import { BillViewDialog } from './bill-view-dialog'
 import { DownloadBillButton } from '@/components/pos/download-bill-button'
 import { PrintBillButton } from '@/components/pos/print-bill-button'
 import { CancelBillDialog } from './cancel-bill-dialog'
+import { getBillItemsForEditAction } from './actions'
+
+// ─── Edit bill button ────────────────────────────────────────────────────────
+
+function EditBillButton({ bill, onEdit }: { bill: PosBill; onEdit: (bill: PosBill, items: any[]) => void }) {
+  const [loading, setLoading] = useState(false)
+
+  async function handleClick() {
+    setLoading(true)
+    const result = await getBillItemsForEditAction(bill.id)
+    setLoading(false)
+    if (result.data) {
+      onEdit(bill, result.data)
+    } else {
+      toast.error('Failed to load bill items for editing')
+    }
+  }
+
+  if (bill.status === 'cancelled') return null
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8"
+      title="Edit bill"
+      onClick={handleClick}
+      disabled={loading}
+    >
+      {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+    </Button>
+  )
+}
 
 // ─── Reusable sort header ─────────────────────────────────────────────────────
 
@@ -170,17 +206,19 @@ export const billColumns: ColumnDef<PosBill>[] = [
   {
     id: 'actions',
     header: () => <span className="text-xs font-semibold uppercase tracking-wider text-foreground/60">Actions</span>,
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const bill = row.original
+      const onEdit = (table.options.meta as any)?.onEditBill as ((bill: PosBill, items: any[]) => void) | undefined
       return (
         <div className="flex items-center gap-0.5">
-          <BillViewDialog bill={bill} />
+          <BillViewDialog bill={bill} onEdit={onEdit} />
+          {onEdit && <EditBillButton bill={bill} onEdit={onEdit} />}
           <PrintBillButton bill={bill} />
           <DownloadBillButton bill={bill} />
           <CancelBillDialog bill={bill} />
         </div>
       )
     },
-    size: 160,
+    size: 200,
   },
 ]

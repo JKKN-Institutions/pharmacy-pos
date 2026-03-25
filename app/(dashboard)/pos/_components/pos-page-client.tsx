@@ -70,6 +70,7 @@ export function PosPageClient({
 }: PosPageClientProps) {
   const [view, setView] = useState<'history' | 'new-bill' | 'edit-bill'>('history')
   const [editBillData, setEditBillData] = useState<EditBillData | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
   const router = useRouter()
 
   // Pre-warm medicine catalog in IndexedDB so it's ready when the user starts billing
@@ -80,6 +81,12 @@ export function PosPageClient({
   function handleBillSaved() {
     setView('history')
     setEditBillData(null)
+    setRefreshKey(k => k + 1)
+    router.refresh()
+  }
+
+  function handleBillChanged() {
+    setRefreshKey(k => k + 1)
     router.refresh()
   }
 
@@ -114,6 +121,7 @@ export function PosPageClient({
           userId={userId}
           branchId={branchId}
           onSaved={handleBillSaved}
+          onBillSaved={handleBillChanged}
           onCancel={() => { setView('history'); setEditBillData(null) }}
           editBill={editBillData}
         />
@@ -145,6 +153,7 @@ export function PosPageClient({
           userId={userId}
           branchId={branchId}
           onSaved={handleBillSaved}
+          onBillSaved={handleBillChanged}
           onCancel={() => setView('history')}
         />
       </div>
@@ -214,7 +223,7 @@ export function PosPageClient({
       </Button>
 
       {/* ── Bills table ───────────────────────────────────────────────────── */}
-      <BillsTable initialData={initialBills} initialTotalCount={initialTotalCount} onEditBill={handleEditBill} />
+      <BillsTable initialData={initialBills} initialTotalCount={initialTotalCount} onEditBill={handleEditBill} refreshKey={refreshKey} />
 
     </div>
   )

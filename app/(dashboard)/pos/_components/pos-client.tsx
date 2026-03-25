@@ -51,11 +51,12 @@ interface PosFormProps {
   userId?: string
   branchId?: string
   onSaved?: () => void
+  onBillSaved?: () => void
   onCancel?: () => void
   editBill?: EditBillData | null
 }
 
-export function PosForm({ userId, branchId, onSaved, onCancel, editBill }: PosFormProps) {
+export function PosForm({ userId, branchId, onSaved, onBillSaved, onCancel, editBill }: PosFormProps) {
   const [isOnline, setIsOnline]         = useState(true)
   const [isSyncing, setIsSyncing]       = useState(false)
   const [items, setItems]               = useState<BillItem[]>(() => editBill?.items ?? [])
@@ -217,6 +218,7 @@ export function PosForm({ userId, branchId, onSaved, onCancel, editBill }: PosFo
           // Keep tracking this bill for further edits
           setEditingBillId({ id: responseData.id, bill_no: responseData.bill_no, branch_id: bill.branch_id, created_by: bill.created_by, created_at: bill.created_at })
           setSavedBill({ bill, items: [...items] })
+          onBillSaved?.()
         } else {
           toast.error(responseData.error ?? `Failed to ${isUpdate ? 'update' : 'save'} bill`)
         }

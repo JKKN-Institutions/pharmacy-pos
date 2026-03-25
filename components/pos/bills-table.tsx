@@ -113,9 +113,10 @@ interface BillsTableProps {
   initialData: PosBill[]
   initialTotalCount: number
   onEditBill?: (bill: PosBill, items: any[]) => void
+  refreshKey?: number
 }
 
-export function BillsTable({ initialData, initialTotalCount, onEditBill }: BillsTableProps) {
+export function BillsTable({ initialData, initialTotalCount, onEditBill, refreshKey = 0 }: BillsTableProps) {
   // ── Server-side state ──
   const [data, setData] = useState<PosBill[]>(initialData)
   const [totalCount, setTotalCount] = useState(initialTotalCount)
@@ -167,7 +168,7 @@ export function BillsTable({ initialData, initialTotalCount, onEditBill }: Bills
       setData(result.data as PosBill[])
       setTotalCount(result.totalCount)
     })
-  }, [pagination.pageIndex, pagination.pageSize, debouncedSearch, statusFilter, paymentFilter, dateRange, sorting])
+  }, [pagination.pageIndex, pagination.pageSize, debouncedSearch, statusFilter, paymentFilter, dateRange, sorting, refreshKey])
 
   const pageCount = Math.ceil(totalCount / pagination.pageSize)
 

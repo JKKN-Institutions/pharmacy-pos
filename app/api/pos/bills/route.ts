@@ -245,7 +245,6 @@ export async function PUT(req: NextRequest) {
       due:            data.due,
       note:           data.note ?? null,
       bill_date:      data.bill_date,
-      updated_at:     new Date().toISOString(),
     })
     .eq('id', billId)
 

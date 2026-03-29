@@ -688,6 +688,11 @@ export function PurchaseForm({ suppliers, medicines, initialData }: PurchaseForm
                                 onValueChange={(id, taxPercent) => {
                                   field.onChange(id)
                                   form.setValue(`items.${index}.tax`, taxPercent, { shouldDirty: true })
+                                  // Auto-fill sale price from last purchase of this medicine with the selected supplier
+                                  const prevPrice = lastSalePrices[id]
+                                  if (prevPrice && prevPrice > 0) {
+                                    form.setValue(`items.${index}.sale_price`, prevPrice, { shouldDirty: true })
+                                  }
                                   recalcItem(index)
                                 }}
                               />

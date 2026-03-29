@@ -57,7 +57,15 @@ export async function deleteMedicineAction(id: string) {
   // Remove stock batches linked to this medicine before deleting the master record
   await supabase.from('stock_batches').delete().eq('medicine_id', id)
   const { error } = await supabase.from('medicines').delete().eq('id', id)
-  if (error) return { error: error.message }
+  if (error) {
+    if (error.code === '23503') {
+      return {
+        error:
+          'This medicine has purchase records and cannot be deleted. Use "Set Inactive" to hide it from the catalog instead.',
+      }
+    }
+    return { error: error.message }
+  }
   revalidatePath('/medicines')
   revalidatePath('/stock')
   return { success: true }
@@ -77,7 +85,16 @@ export async function bulkDeleteMedicinesAction(ids: string[]): Promise<{
     .from('medicines')
     .delete({ count: 'exact' })
     .in('id', ids)
-  if (error) return { deleted: 0, error: error.message }
+  if (error) {
+    if (error.code === '23503') {
+      return {
+        deleted: 0,
+        error:
+          'One or more medicines have purchase records and cannot be deleted. Use "Set Inactive" to hide them from the catalog instead.',
+      }
+    }
+    return { deleted: 0, error: error.message }
+  }
   revalidatePath('/medicines')
   revalidatePath('/stock')
   return { deleted: count ?? ids.length }

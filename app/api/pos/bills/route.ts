@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Log activity
-  logActivity({
+  await logActivity({
     userId: user?.id ?? '',
     userName: profile?.name ?? 'Unknown',
     branchId: profile?.branch_id,
@@ -271,7 +271,7 @@ export async function PUT(req: NextRequest) {
     ? await supabase.from('user_profiles').select('id, name, branch_id').eq('auth_user_id', authUser.id).single()
     : { data: null }
 
-  logActivity({
+  await logActivity({
     userId: authUser?.id ?? '',
     userName: userProfile?.name ?? 'Unknown',
     branchId: userProfile?.branch_id,

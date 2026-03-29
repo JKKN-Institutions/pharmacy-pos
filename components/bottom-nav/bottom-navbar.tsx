@@ -27,6 +27,7 @@ import {
   Percent,
   Tag,
   MoreHorizontal,
+  ScrollText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useBottomNav } from '@/hooks/use-bottom-nav'
@@ -160,6 +161,12 @@ function getNavGroups(pathname: string, userRole: string): BottomNavGroup[] {
       label: 'Users',
       icon: UserCog,
       active: pathname.startsWith('/users'),
+    })
+    adminMenus.push({
+      href: '/activity-logs',
+      label: 'Activity Log',
+      icon: ScrollText,
+      active: pathname.startsWith('/activity-logs'),
     })
   }
   if (['admin', 'manager', 'pharmacist'].includes(userRole)) {

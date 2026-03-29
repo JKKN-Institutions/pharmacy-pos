@@ -28,7 +28,7 @@ import {
 import {
   LayoutDashboard, ShoppingCart, FileText, ClipboardList,
   Archive, Users, Truck, DollarSign, BarChart3, Settings,
-  Pill, Receipt, BookOpen, UserCog, Percent, ChevronRight, Tag, DatabaseZap,
+  Pill, Receipt, BookOpen, UserCog, Percent, ChevronRight, Tag, DatabaseZap, ScrollText,
 } from 'lucide-react'
 
 type NavItem = {
@@ -163,6 +163,22 @@ function AdminGroup({ userRole, pathname }: { userRole: string; pathname: string
                 <Link href="/users">
                   <NavItemIcon icon={UserCog} />
                   <span className="font-medium">Users</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
+
+          {/* Activity Log — admin only */}
+          {showUsers && (
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/activity-logs' || pathname.startsWith('/activity-logs/')}
+                tooltip="Activity Log"
+              >
+                <Link href="/activity-logs">
+                  <NavItemIcon icon={ScrollText} />
+                  <span className="font-medium">Activity Log</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

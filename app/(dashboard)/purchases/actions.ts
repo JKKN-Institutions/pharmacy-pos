@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/utils/activity-logger'
 
 /** Convert YYYY-MM (from month picker) to YYYY-MM-01 for PostgreSQL DATE column */
 function normalizeExpiryDate(d: string): string {
@@ -43,7 +44,7 @@ export async function createPurchaseAction(data: {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: userProfile } = await supabase
     .from('user_profiles')
-    .select('id, branch_id')
+    .select('id, name, branch_id')
     .eq('auth_user_id', user?.id ?? '')
     .single()
 
@@ -120,6 +121,17 @@ export async function createPurchaseAction(data: {
     return { error: `Failed to update stock: ${stockError.message}` }
   }
 
+  await logActivity({
+    userId: user?.id ?? '',
+    userName: userProfile?.name ?? '',
+    branchId,
+    action: 'CREATE',
+    entityType: 'purchase',
+    entityId: purchase.id,
+    entityLabel: data.invoice_no,
+    details: { supplier_id: data.supplier_id, total: data.total, items_count: data.items.length },
+  })
+
   revalidatePath('/purchases')
   revalidatePath('/stock')
   redirect('/purchases')
@@ -146,7 +158,7 @@ export async function updatePurchaseAction(
   const { data: { user } } = await supabase.auth.getUser()
   const { data: userProfile } = await supabase
     .from('user_profiles')
-    .select('id, branch_id')
+    .select('id, name, branch_id')
     .eq('auth_user_id', user?.id ?? '')
     .single()
 
@@ -237,6 +249,17 @@ export async function updatePurchaseAction(
     })),
   )
   if (stockErr) return { error: `Failed to update stock: ${stockErr.message}` }
+
+  await logActivity({
+    userId: user?.id ?? '',
+    userName: userProfile?.name ?? '',
+    branchId,
+    action: 'UPDATE',
+    entityType: 'purchase',
+    entityId: purchaseId,
+    entityLabel: data.invoice_no,
+    details: { supplier_id: data.supplier_id, total: data.total, items_count: data.items.length },
+  })
 
   revalidatePath('/purchases')
   revalidatePath(`/purchases/${purchaseId}`)
@@ -444,6 +467,12 @@ export async function getLastSalePricesBySupplierAction(
 
 export async function deletePurchaseAction(id: string) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: userProfile } = await supabase
+    .from('user_profiles')
+    .select('id, name, branch_id')
+    .eq('auth_user_id', user?.id ?? '')
+    .single()
 
   // 1. Remove stock batches created by this purchase
   const { error: stockError } = await supabase
@@ -459,6 +488,15 @@ export async function deletePurchaseAction(id: string) {
   // 3. Delete purchase header
   const { error } = await supabase.from('purchases').delete().eq('id', id)
   if (error) return { error: error.message }
+
+  await logActivity({
+    userId: user?.id ?? '',
+    userName: userProfile?.name ?? '',
+    branchId: userProfile?.branch_id ?? null,
+    action: 'DELETE',
+    entityType: 'purchase',
+    entityId: id,
+  })
 
   revalidatePath('/purchases')
   revalidatePath('/stock')

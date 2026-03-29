@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { medicineSchema } from '@/lib/validators/medicine-schema'
+import { logActivity } from '@/lib/utils/activity-logger'
 import type { ParsedMedicineRow } from '@/lib/utils/parse-medicines-excel'
 import {
   buildFingerprint,
@@ -28,8 +29,26 @@ export async function createMedicineAction(formData: FormData) {
     branch_id: branch?.id,
   }
 
-  const { error } = await supabase.from('medicines').insert(payload)
+  const { data: inserted, error } = await supabase.from('medicines').insert(payload).select('id').single()
   if (error) return { error: error.message }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('id, name, branch_id')
+    .eq('auth_user_id', user?.id ?? '')
+    .single()
+
+  await logActivity({
+    userId: profile?.id ?? '',
+    userName: profile?.name ?? '',
+    branchId: profile?.branch_id,
+    action: 'CREATE',
+    entityType: 'medicine',
+    entityId: inserted?.id,
+    entityLabel: parsed.data.name,
+  })
+
   revalidatePath('/medicines')
   redirect('/medicines')
 }
@@ -48,6 +67,24 @@ export async function updateMedicineAction(id: string, formData: FormData) {
 
   const { error } = await supabase.from('medicines').update(payload).eq('id', id)
   if (error) return { error: error.message }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('id, name, branch_id')
+    .eq('auth_user_id', user?.id ?? '')
+    .single()
+
+  await logActivity({
+    userId: profile?.id ?? '',
+    userName: profile?.name ?? '',
+    branchId: profile?.branch_id,
+    action: 'UPDATE',
+    entityType: 'medicine',
+    entityId: id,
+    entityLabel: parsed.data.name,
+  })
+
   revalidatePath('/medicines')
   redirect('/medicines')
 }
@@ -66,6 +103,23 @@ export async function deleteMedicineAction(id: string) {
     }
     return { error: error.message }
   }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('id, name, branch_id')
+    .eq('auth_user_id', user?.id ?? '')
+    .single()
+
+  await logActivity({
+    userId: profile?.id ?? '',
+    userName: profile?.name ?? '',
+    branchId: profile?.branch_id,
+    action: 'DELETE',
+    entityType: 'medicine',
+    entityId: id,
+  })
+
   revalidatePath('/medicines')
   revalidatePath('/stock')
   return { success: true }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { calculateLineItem } from '@/lib/utils/billing'
+import { logActivity } from '@/lib/utils/activity-logger'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   // Get user profile (branch_id must match get_user_branch() for RLS)
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = user
-    ? await supabase.from('user_profiles').select('id, branch_id').eq('auth_user_id', user.id).single()
+    ? await supabase.from('user_profiles').select('id, name, branch_id').eq('auth_user_id', user.id).single()
     : { data: null }
 
   // Generate bill number via DB sequence
@@ -102,6 +103,18 @@ export async function POST(req: NextRequest) {
       p_qty:      item.qty,
     })
   }
+
+  // Log activity
+  logActivity({
+    userId: user?.id ?? '',
+    userName: profile?.name ?? 'Unknown',
+    branchId: profile?.branch_id,
+    action: 'CREATE',
+    entityType: 'pos_bill',
+    entityId: bill.id,
+    entityLabel: bill.bill_no,
+    details: { total: data.total, items_count: data.items.length, payment_method: data.payment_method },
+  })
 
   return NextResponse.json({ bill_no: bill.bill_no, id: bill.id })
 }
@@ -251,6 +264,23 @@ export async function PUT(req: NextRequest) {
   if (billError) {
     return NextResponse.json({ error: billError.message }, { status: 500 })
   }
+
+  // Get user info for logging
+  const { data: { user: authUser } } = await supabase.auth.getUser()
+  const { data: userProfile } = authUser
+    ? await supabase.from('user_profiles').select('id, name, branch_id').eq('auth_user_id', authUser.id).single()
+    : { data: null }
+
+  logActivity({
+    userId: authUser?.id ?? '',
+    userName: userProfile?.name ?? 'Unknown',
+    branchId: userProfile?.branch_id,
+    action: 'UPDATE',
+    entityType: 'pos_bill',
+    entityId: billId,
+    entityLabel: existingBill.bill_no,
+    details: { total: data.total, items_count: data.items.length },
+  })
 
   return NextResponse.json({ bill_no: existingBill.bill_no, id: billId })
 }

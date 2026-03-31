@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { ActivityAction, ActivityEntityType } from '@/lib/types/database'
 
 interface LogActivityParams {
@@ -10,16 +11,20 @@ interface LogActivityParams {
   entityId?: string | null
   entityLabel?: string | null
   details?: Record<string, unknown>
+  /** Pass an existing Supabase client (e.g. from a Route Handler) to reuse its auth session. */
+  supabaseClient?: SupabaseClient
 }
 
 /**
- * Write one activity log entry from a Server Action.
- * Fires-and-forgets — errors are silently swallowed so a logging failure
- * never breaks the primary operation.
+ * Write one activity log entry.
+ * Accepts an optional supabaseClient — pass one from Route Handlers so the
+ * insert reuses the already-authenticated client instead of creating a new one
+ * (which can lose session context in API routes).
+ * Errors are silently swallowed so a logging failure never breaks the primary operation.
  */
 export async function logActivity(params: LogActivityParams): Promise<void> {
   try {
-    const supabase = await createClient()
+    const supabase = params.supabaseClient ?? await createClient()
     await supabase.from('activity_logs').insert({
       user_id:      params.userId,
       user_name:    params.userName,

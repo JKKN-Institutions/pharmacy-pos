@@ -114,6 +114,7 @@ export async function POST(req: NextRequest) {
     entityId: bill.id,
     entityLabel: bill.bill_no,
     details: { total: data.total, items_count: data.items.length, payment_method: data.payment_method },
+    supabaseClient: supabase,
   })
 
   return NextResponse.json({ bill_no: bill.bill_no, id: bill.id })
@@ -280,6 +281,7 @@ export async function PUT(req: NextRequest) {
     entityId: billId,
     entityLabel: existingBill.bill_no,
     details: { total: data.total, items_count: data.items.length },
+    supabaseClient: supabase,
   })
 
   return NextResponse.json({ bill_no: existingBill.bill_no, id: billId })

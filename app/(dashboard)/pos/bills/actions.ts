@@ -257,6 +257,7 @@ export async function cancelBillAction(id: string, reason: string) {
     entityId: id,
     entityLabel: bill.bill_no,
     details: { reason: reason.trim() },
+    supabaseClient: supabase,
   })
 
   revalidatePath('/pos/bills')

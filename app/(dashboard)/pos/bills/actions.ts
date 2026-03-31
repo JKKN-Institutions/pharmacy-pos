@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { logActivity } from '@/lib/utils/activity-logger'
 
 // ─── Paginated bills query ────────────────────────────────────────────────────
 
@@ -182,7 +183,7 @@ export async function cancelBillAction(id: string, reason: string) {
   // 0. Verify bill exists and is not already cancelled
   const { data: bill } = await supabase
     .from('pos_bills')
-    .select('id, status')
+    .select('id, status, bill_no')
     .eq('id', id)
     .single()
 
@@ -192,13 +193,17 @@ export async function cancelBillAction(id: string, reason: string) {
   // 1. Get current user for cancelled_by
   const { data: { user } } = await supabase.auth.getUser()
   let profileId: string | null = null
+  let profileName = 'Unknown'
+  let profileBranchId: string | undefined
   if (user) {
     const { data: profile } = await supabase
       .from('user_profiles')
-      .select('id')
+      .select('id, name, branch_id')
       .eq('auth_user_id', user.id)
       .single()
     profileId = profile?.id ?? null
+    profileName = profile?.name ?? 'Unknown'
+    profileBranchId = profile?.branch_id ?? undefined
   }
 
   // 2. Fetch bill items — needed to restore stock
@@ -242,6 +247,17 @@ export async function cancelBillAction(id: string, reason: string) {
     .eq('id', id)
 
   if (error) return { error: error.message }
+
+  await logActivity({
+    userId: user?.id ?? '',
+    userName: profileName,
+    branchId: profileBranchId,
+    action: 'CANCEL',
+    entityType: 'pos_bill',
+    entityId: id,
+    entityLabel: bill.bill_no,
+    details: { reason: reason.trim() },
+  })
 
   revalidatePath('/pos/bills')
   revalidatePath('/pos')

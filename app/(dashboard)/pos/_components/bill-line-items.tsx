@@ -81,9 +81,6 @@ function MedicineCombobox({
               const availableCount = (m.batches ?? []).filter(
                 (b) => b.available_qty > 0 && b.expiry_date >= today,
               ).length
-              const totalQty = (m.batches ?? [])
-                .filter((b) => b.available_qty > 0 && b.expiry_date >= today)
-                .reduce((s, b) => s + b.available_qty, 0)
               const isOutOfStock = availableCount === 0
 
               return (
@@ -99,23 +96,9 @@ function MedicineCombobox({
                   )}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <span className="text-sm font-semibold">{m.name}</span>
-                      {m.company && (
-                        <span className="text-xs text-muted-foreground ml-1.5">{m.company}</span>
-                      )}
-                    </div>
-                    {isOutOfStock ? (
+                    <span className="text-sm font-semibold">{m.name}</span>
+                    {isOutOfStock && (
                       <span className="text-[10px] text-destructive shrink-0">Out of stock</span>
-                    ) : (
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
-                          {availableCount} batch{availableCount !== 1 ? 'es' : ''}
-                        </span>
-                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">
-                          Qty: {totalQty}
-                        </span>
-                      </div>
                     )}
                   </div>
                 </button>

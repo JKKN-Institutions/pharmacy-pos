@@ -39,161 +39,126 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
         price: number
       }>
 
-      const totalQty  = items.reduce((s, it) => s + Number(it.qty || 0), 0)
-      const itemCount = items.length
-      const statusKey  = (bill.status ?? '').toString()
-      const statusText = statusKey.replace(/_/g, ' ')
-
-      const itemRows = items.map((item, i) => `
-        <tr${i % 2 === 1 ? ' class="alt"' : ''}>
-          <td class="idx">${i + 1}</td>
+      const itemRows = items.map((item) => `
+        <tr>
           <td class="name">${escapeHtml(item.medicine_name ?? '—')}</td>
-          <td class="batch">${escapeHtml(item.batch_no ?? '')}</td>
-          <td class="right qty">${item.qty}</td>
-          <td class="right price">${fmtINR(item.sale_price)}</td>
-          <td class="right total">${fmtINR(item.price)}</td>
+          <td class="right">${item.qty}</td>
+          <td class="right">${fmtINR(item.sale_price)}</td>
+          <td class="right bold">${fmtINR(item.price)}</td>
+        </tr>
+        <tr class="batch">
+          <td colspan="4">Batch: ${escapeHtml(item.batch_no ?? '')}</td>
         </tr>
       `).join('')
 
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><title>${escapeHtml(bill.bill_no)}</title>
 <style>
-  @page { size: A4; margin: 14mm 12mm; }
+  @page { size: A4; margin: 15mm 15mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { background: #fff; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 12px;
-    color: #111;
+    font-family: 'Courier New', 'Courier', monospace;
+    font-size: 16px;
+    line-height: 1.45;
+    color: #000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .shop-title { text-align: center; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 14mm; }
-  .card { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
 
-  .card-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; gap: 12px; border-bottom: 1px solid #e5e7eb; }
-  .head-left { display: flex; align-items: center; gap: 12px; }
-  .head-icon {
-    width: 34px; height: 34px; border-radius: 8px;
-    background: #eef2ff; color: #4f46e5;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 16px;
+  .center { text-align: center; }
+  .bold   { font-weight: 700; }
+  .right  { text-align: right; }
+
+  .shop-name { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  .shop-info { font-size: 13px; color: #222; line-height: 1.5; }
+
+  .divider { border-top: 1.5px dashed #000; margin: 10px 0; }
+
+  .memo { font-size: 20px; font-weight: 700; letter-spacing: 2px; margin: 6px 0; }
+
+  .meta {
+    display: flex; justify-content: space-between;
+    font-size: 15px; margin-bottom: 4px;
   }
-  .bill-no   { font-family: 'Courier New', monospace; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
-  .bill-date { font-size: 11px; color: #6b7280; margin-top: 2px; }
-  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
-  .status-saved, .status-synced { background: #dcfce7; color: #15803d; }
-  .status-sync_error { background: #fee2e2; color: #b91c1c; }
-  .status-cancelled  { background: #f3f4f6; color: #4b5563; }
-  .status-pending    { background: #fef3c7; color: #92400e; }
+  .meta .label { color: #333; }
 
-  .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 18px; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
-  .meta-cell  { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; padding: 8px 12px; }
-  .meta-label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6px; }
-  .meta-value { font-size: 13px; font-weight: 600; color: #111; margin-top: 2px; }
-  .meta-sub   { font-size: 11px; color: #6b7280; margin-top: 1px; }
-
-  table { width: 100%; border-collapse: collapse; }
-  thead tr { background: #f3f4f6; border-bottom: 1px solid #e5e7eb; }
-  thead th { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6px; padding: 10px 12px; text-align: left; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  thead th {
+    font-size: 14px; font-weight: 700; text-align: left;
+    padding: 6px 4px; border-bottom: 1.5px solid #000;
+  }
   thead th.right { text-align: right; }
-  tbody td { padding: 10px 12px; font-size: 12px; border-bottom: 1px solid #f1f1f1; }
-  tbody tr:last-child td { border-bottom: 0; }
-  tbody tr.alt td  { background: #fafafa; }
-  tbody td.idx    { color: #9ca3af; font-size: 11px; width: 36px; }
-  tbody td.name   { font-weight: 600; }
-  tbody td.batch  { font-family: 'Courier New', monospace; color: #6b7280; font-size: 11px; width: 80px; }
-  tbody td.right  { text-align: right; font-variant-numeric: tabular-nums; }
-  tbody td.qty    { width: 60px; }
-  tbody td.price  { width: 90px; color: #4b5563; }
-  tbody td.total  { width: 100px; font-weight: 600; }
+  tbody td { padding: 5px 4px; vertical-align: top; }
+  tbody td.name { word-break: break-word; }
+  tr.batch td { font-size: 12px; color: #444; padding: 0 4px 6px 4px; }
 
-  .totals { background: #fafafa; padding: 12px 18px; border-top: 1px solid #e5e7eb; }
-  .totals .row { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; padding: 3px 0; }
-  .totals .row.grand { font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
-  .totals .row.grand .amt { color: #4f46e5; }
+  .totals { margin-top: 8px; }
+  .totals .row {
+    display: flex; justify-content: space-between;
+    font-size: 15px; margin-bottom: 3px;
+  }
+  .totals .row.label { color: #333; }
+  .totals .grand {
+    font-size: 22px; font-weight: 700;
+    border-top: 1.5px solid #000; padding-top: 8px; margin-top: 8px;
+  }
 
-  .side-pad { padding: 0 18px; }
-  .note       { margin: 10px 0; padding: 8px 12px; border: 1px solid #fde68a; background: #fffbeb; border-radius: 6px; font-size: 11px; }
-  .cancel-box { margin: 10px 0; padding: 8px 12px; border: 1px solid #fecaca; background: #fef2f2; border-radius: 6px; font-size: 11px; color: #991b1b; }
-
-  @media print {
-    .card { break-inside: avoid; }
+  .footer {
+    font-size: 14px; color: #333; text-align: center;
+    margin-top: 14px; line-height: 1.5;
   }
 </style></head>
 <body>
-  <div class="shop-title">${escapeHtml(pharmacy.store_name || 'Pharmacy')}</div>
-
-  <div class="card">
-    <div class="card-head">
-      <div class="head-left">
-        <div class="head-icon">$</div>
-        <div>
-          <div class="bill-no">${escapeHtml(bill.bill_no)}</div>
-          <div class="bill-date">${format(new Date(bill.bill_date), 'dd MMM yyyy, hh:mm a')}</div>
-        </div>
-      </div>
-      <span class="status-badge status-${escapeHtml(statusKey)}">${escapeHtml(statusText)}</span>
+  <div class="center">
+    <div class="shop-name">${escapeHtml(pharmacy.store_name || 'Pharmacy')}</div>
+    <div class="shop-info">
+      ${pharmacy.store_address ? escapeHtml(pharmacy.store_address) + '<br/>' : ''}
+      ${pharmacy.store_phone   ? 'Ph: ' + escapeHtml(pharmacy.store_phone) + '<br/>' : ''}
+      ${pharmacy.store_gstin   ? 'GSTIN: ' + escapeHtml(pharmacy.store_gstin) + '<br/>' : ''}
+      ${pharmacy.store_dl      ? 'DL No: ' + escapeHtml(pharmacy.store_dl) : ''}
     </div>
+  </div>
 
-    <div class="meta-grid">
-      <div class="meta-cell">
-        <div class="meta-label">Customer</div>
-        <div class="meta-value">${escapeHtml(bill.customer_name ?? 'Walk-in')}</div>
-        ${bill.customer_phone ? `<div class="meta-sub">${escapeHtml(bill.customer_phone)}</div>` : ''}
-      </div>
-      <div class="meta-cell">
-        <div class="meta-label">Payment</div>
-        <div class="meta-value" style="text-transform:capitalize">${escapeHtml(bill.payment_method ?? '')}</div>
-      </div>
-      ${bill.doctor ? `
-      <div class="meta-cell">
-        <div class="meta-label">Doctor</div>
-        <div class="meta-value">${escapeHtml(bill.doctor)}</div>
-      </div>` : `
-      <div class="meta-cell">
-        <div class="meta-label">Items</div>
-        <div class="meta-value">${itemCount} items, ${totalQty} qty</div>
-      </div>`}
-    </div>
+  <div class="divider"></div>
+  <div class="center memo">CASH MEMO</div>
 
-    ${bill.status === 'cancelled' && bill.cancel_reason ? `
-      <div class="side-pad">
-        <div class="cancel-box">
-          <strong>Cancelled${bill.cancelled_at ? ' on ' + format(new Date(bill.cancelled_at), 'dd MMM yyyy, hh:mm a') : ''}:</strong>
-          ${escapeHtml(bill.cancel_reason)}
-        </div>
-      </div>
-    ` : ''}
+  <div class="meta"><span class="label">Bill No.</span><span class="bold">${escapeHtml(bill.bill_no)}</span></div>
+  <div class="meta"><span class="label">Date</span><span>${format(new Date(bill.bill_date), 'dd/MM/yyyy')}</span></div>
+  ${bill.customer_name  ? `<div class="meta"><span class="label">Customer</span><span>${escapeHtml(bill.customer_name)}</span></div>` : ''}
+  ${bill.customer_phone ? `<div class="meta"><span class="label">Phone</span><span>${escapeHtml(bill.customer_phone)}</span></div>`    : ''}
+  ${bill.doctor         ? `<div class="meta"><span class="label">Doctor</span><span>${escapeHtml(bill.doctor)}</span></div>`           : ''}
+  <div class="meta"><span class="label">Payment</span><span style="text-transform:uppercase">${escapeHtml(bill.payment_method ?? '')}</span></div>
 
-    ${bill.note ? `
-      <div class="side-pad">
-        <div class="note"><strong>Note:</strong> ${escapeHtml(bill.note)}</div>
-      </div>
-    ` : ''}
+  <div class="divider"></div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Medicine</th>
-          <th>Batch</th>
-          <th class="right">Qty</th>
-          <th class="right">Price</th>
-          <th class="right">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${itemRows}
-      </tbody>
-    </table>
+  <table>
+    <thead>
+      <tr>
+        <th>Medicine</th>
+        <th class="right" style="width:80px">Qty</th>
+        <th class="right" style="width:120px">Rate</th>
+        <th class="right" style="width:140px">Amt</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+    </tbody>
+  </table>
 
-    <div class="totals">
-      <div class="row"><span>Subtotal</span><span>${fmtINR(bill.subtotal)}</span></div>
-      ${bill.discount_total > 0 ? `<div class="row"><span>Discount</span><span style="color:#dc2626">− ${fmtINR(bill.discount_total)}</span></div>` : ''}
-      ${bill.tax_total > 0 ? `<div class="row"><span>Tax</span><span>+ ${fmtINR(bill.tax_total)}</span></div>` : ''}
-      <div class="row grand"><span>Total</span><span class="amt">${fmtINR(bill.total)}</span></div>
-    </div>
+  <div class="divider"></div>
+
+  <div class="totals">
+    <div class="row"><span class="label">Subtotal</span><span>${fmtINR(bill.subtotal)}</span></div>
+    ${bill.discount_total > 0 ? `<div class="row"><span class="label">Discount</span><span>- ${fmtINR(bill.discount_total)}</span></div>` : ''}
+    ${bill.tax_total > 0      ? `<div class="row"><span class="label">Tax</span><span>+ ${fmtINR(bill.tax_total)}</span></div>`           : ''}
+    <div class="row grand"><span>TOTAL</span><span>${fmtINR(bill.total)}</span></div>
+  </div>
+
+  <div class="divider"></div>
+  <div class="footer">
+    ${escapeHtml(pharmacy.invoice_footer || 'Thank you for your purchase!')}
+    ${bill.note ? '<br/>Note: ' + escapeHtml(bill.note) : ''}
   </div>
 
   <script>

@@ -55,21 +55,21 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><title>${bill.bill_no}</title>
 <style>
-  @page { size: 80mm auto; margin: 3mm 2mm; }
+  @page { size: 80mm auto; margin: 10mm 2mm 5mm 2mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Courier New', monospace;
     font-size: 12px;
     color: #000;
     width: 76mm;
-    padding: 2mm 3mm;
+    padding: 8mm 3mm 3mm 3mm;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   .center { text-align: center; }
   .bold { font-weight: 700; }
   .right { text-align: right; }
-  .shop-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .shop-name { font-size: 16px; font-weight: 700; margin-top: 2mm; margin-bottom: 2px; }
   .shop-info { font-size: 10px; color: #333; line-height: 1.4; }
   .divider { border-top: 1px dashed #000; margin: 6px 0; }
   .memo { font-size: 13px; font-weight: 700; letter-spacing: 1px; margin: 4px 0; }
@@ -89,7 +89,7 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
   .footer { font-size: 10px; color: #555; text-align: center; margin-top: 8px; line-height: 1.4; }
   @media print {
     html, body { width: 76mm; }
-    body { padding: 2mm 3mm; }
+    body { padding: 8mm 3mm 3mm 3mm; }
   }
 </style></head>
 <body>

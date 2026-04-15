@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import { logActivity } from '@/lib/utils/activity-logger'
 
 // ─── Paginated bills query ────────────────────────────────────────────────────
@@ -90,23 +91,28 @@ export async function fetchBillsAction(params: FetchBillsParams): Promise<FetchB
 export async function fetchBillsSummaryAction() {
   const supabase = await createClient()
 
-  // Total revenue — sum of completed bills
-  const { data: totalData } = await supabase
-    .from('pos_bills')
-    .select('total')
-    .in('status', ['paid', 'saved'])
-
-  const totalRevenue = (totalData ?? []).reduce((sum, b) => sum + (b.total ?? 0), 0)
+  // Total revenue — sum of non-cancelled bills (paginated past Supabase's
+  // 1000-row default cap; otherwise large histories silently under-count).
+  const totalRows = await fetchAllRows<{ total: number }>(() =>
+    supabase
+      .from('pos_bills')
+      .select('total')
+      .neq('status', 'cancelled')
+      .order('id'),
+  )
+  const totalRevenue = totalRows.reduce((sum, b) => sum + Number(b.total ?? 0), 0)
 
   // Today's revenue
   const todayStr = new Date().toISOString().slice(0, 10)
-  const { data: todayData } = await supabase
-    .from('pos_bills')
-    .select('total')
-    .in('status', ['paid', 'saved'])
-    .eq('bill_date', todayStr)
-
-  const todayRevenue = (todayData ?? []).reduce((sum, b) => sum + (b.total ?? 0), 0)
+  const todayRows = await fetchAllRows<{ total: number }>(() =>
+    supabase
+      .from('pos_bills')
+      .select('total')
+      .neq('status', 'cancelled')
+      .eq('bill_date', todayStr)
+      .order('id'),
+  )
+  const todayRevenue = todayRows.reduce((sum, b) => sum + Number(b.total ?? 0), 0)
 
   // Pending count
   const { count: pendingCount } = await supabase

@@ -5,7 +5,6 @@ import { Printer, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { getBillItemsAction, getPharmacySettingsAction } from '@/app/(dashboard)/pos/bills/actions'
-import { formatINR } from '@/lib/utils/currency'
 import { format } from 'date-fns'
 import type { PosBill } from '@/lib/types/database'
 
@@ -40,119 +39,161 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
         price: number
       }>
 
+      const totalQty  = items.reduce((s, it) => s + Number(it.qty || 0), 0)
+      const itemCount = items.length
+      const statusKey  = (bill.status ?? '').toString()
+      const statusText = statusKey.replace(/_/g, ' ')
+
       const itemRows = items.map((item, i) => `
-        <tr class="${i % 2 === 1 ? 'alt' : ''}">
-          <td class="name">${item.medicine_name ?? '—'}</td>
-          <td class="right">${item.qty}</td>
-          <td class="right">${fmtINR(item.sale_price)}</td>
-          <td class="right bold">${fmtINR(item.price)}</td>
-        </tr>
-        <tr class="batch ${i % 2 === 1 ? 'alt' : ''}">
-          <td colspan="4">Batch: ${item.batch_no}</td>
+        <tr${i % 2 === 1 ? ' class="alt"' : ''}>
+          <td class="idx">${i + 1}</td>
+          <td class="name">${escapeHtml(item.medicine_name ?? '—')}</td>
+          <td class="batch">${escapeHtml(item.batch_no ?? '')}</td>
+          <td class="right qty">${item.qty}</td>
+          <td class="right price">${fmtINR(item.sale_price)}</td>
+          <td class="right total">${fmtINR(item.price)}</td>
         </tr>
       `).join('')
 
       const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"/><title>${bill.bill_no}</title>
+<html><head><meta charset="utf-8"/><title>${escapeHtml(bill.bill_no)}</title>
 <style>
-  /* Default: thermal 80mm roll */
-  @page { size: 80mm auto; margin: 10mm 2mm 5mm 2mm; }
-  /* A4 fallback (when the user picks A4/Letter in the browser print dialog) */
-  @page :first { margin-top: 25mm; }
+  @page { size: A4; margin: 14mm 12mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { background: #fff; }
   body {
-    font-family: 'Courier New', monospace;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     font-size: 12px;
-    color: #000;
-    width: 76mm;
-    max-width: 100%;
-    margin: 0 auto;
-    padding: 15mm 3mm 5mm 3mm;
+    color: #111;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  .center { text-align: center; }
-  .bold { font-weight: 700; }
-  .right { text-align: right; }
-  .shop-name { font-size: 16px; font-weight: 700; margin-top: 2mm; margin-bottom: 2px; }
-  .shop-info { font-size: 10px; color: #333; line-height: 1.4; }
-  .divider { border-top: 1px dashed #000; margin: 6px 0; }
-  .memo { font-size: 13px; font-weight: 700; letter-spacing: 1px; margin: 4px 0; }
-  .meta { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
-  .meta .label { color: #555; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  thead th { font-size: 10px; font-weight: 700; text-align: left; padding: 3px 2px; border-bottom: 1px solid #000; }
+  .shop-title { text-align: center; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 14mm; }
+  .card { border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+
+  .card-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; gap: 12px; border-bottom: 1px solid #e5e7eb; }
+  .head-left { display: flex; align-items: center; gap: 12px; }
+  .head-icon {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: #eef2ff; color: #4f46e5;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px;
+  }
+  .bill-no   { font-family: 'Courier New', monospace; font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+  .bill-date { font-size: 11px; color: #6b7280; margin-top: 2px; }
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: capitalize; }
+  .status-saved, .status-synced { background: #dcfce7; color: #15803d; }
+  .status-sync_error { background: #fee2e2; color: #b91c1c; }
+  .status-cancelled  { background: #f3f4f6; color: #4b5563; }
+  .status-pending    { background: #fef3c7; color: #92400e; }
+
+  .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 18px; border-bottom: 1px solid #e5e7eb; background: #fafafa; }
+  .meta-cell  { border: 1px solid #e5e7eb; border-radius: 8px; background: #fff; padding: 8px 12px; }
+  .meta-label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6px; }
+  .meta-value { font-size: 13px; font-weight: 600; color: #111; margin-top: 2px; }
+  .meta-sub   { font-size: 11px; color: #6b7280; margin-top: 1px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: #f3f4f6; border-bottom: 1px solid #e5e7eb; }
+  thead th { font-size: 10px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.6px; padding: 10px 12px; text-align: left; }
   thead th.right { text-align: right; }
-  tbody td { padding: 2px 2px; vertical-align: top; }
-  tbody td.name { word-break: break-word; }
-  tr.batch td { font-size: 9px; color: #666; padding: 0 2px 3px 2px; }
-  tr.alt td { background: #f5f5f5; }
-  .totals { margin-top: 4px; }
-  .totals .row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 1px; }
-  .totals .row.label { color: #555; }
-  .totals .grand { font-size: 14px; font-weight: 700; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
-  .footer { font-size: 10px; color: #555; text-align: center; margin-top: 8px; line-height: 1.4; }
+  tbody td { padding: 10px 12px; font-size: 12px; border-bottom: 1px solid #f1f1f1; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr.alt td  { background: #fafafa; }
+  tbody td.idx    { color: #9ca3af; font-size: 11px; width: 36px; }
+  tbody td.name   { font-weight: 600; }
+  tbody td.batch  { font-family: 'Courier New', monospace; color: #6b7280; font-size: 11px; width: 80px; }
+  tbody td.right  { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody td.qty    { width: 60px; }
+  tbody td.price  { width: 90px; color: #4b5563; }
+  tbody td.total  { width: 100px; font-weight: 600; }
+
+  .totals { background: #fafafa; padding: 12px 18px; border-top: 1px solid #e5e7eb; }
+  .totals .row { display: flex; justify-content: space-between; font-size: 12px; color: #6b7280; padding: 3px 0; }
+  .totals .row.grand { font-size: 15px; font-weight: 700; color: #111; border-top: 1px solid #e5e7eb; margin-top: 6px; padding-top: 8px; }
+  .totals .row.grand .amt { color: #4f46e5; }
+
+  .side-pad { padding: 0 18px; }
+  .note       { margin: 10px 0; padding: 8px 12px; border: 1px solid #fde68a; background: #fffbeb; border-radius: 6px; font-size: 11px; }
+  .cancel-box { margin: 10px 0; padding: 8px 12px; border: 1px solid #fecaca; background: #fef2f2; border-radius: 6px; font-size: 11px; color: #991b1b; }
+
   @media print {
-    html, body { width: auto; }
-    body {
-      width: 76mm;
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 15mm 3mm 5mm 3mm;
-    }
+    .card { break-inside: avoid; }
   }
 </style></head>
 <body>
-  <div class="center">
-    <div class="shop-name">${pharmacy.store_name || 'Pharmacy'}</div>
-    <div class="shop-info">
-      ${pharmacy.store_address ? pharmacy.store_address + '<br/>' : ''}
-      ${pharmacy.store_phone ? 'Ph: ' + pharmacy.store_phone + '<br/>' : ''}
-      ${pharmacy.store_gstin ? 'GSTIN: ' + pharmacy.store_gstin + '<br/>' : ''}
-      ${pharmacy.store_dl ? 'DL No: ' + pharmacy.store_dl : ''}
+  <div class="shop-title">${escapeHtml(pharmacy.store_name || 'Pharmacy')}</div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="head-left">
+        <div class="head-icon">$</div>
+        <div>
+          <div class="bill-no">${escapeHtml(bill.bill_no)}</div>
+          <div class="bill-date">${format(new Date(bill.bill_date), 'dd MMM yyyy, hh:mm a')}</div>
+        </div>
+      </div>
+      <span class="status-badge status-${escapeHtml(statusKey)}">${escapeHtml(statusText)}</span>
     </div>
-  </div>
 
-  <div class="divider"></div>
-  <div class="center memo">CASH MEMO</div>
+    <div class="meta-grid">
+      <div class="meta-cell">
+        <div class="meta-label">Customer</div>
+        <div class="meta-value">${escapeHtml(bill.customer_name ?? 'Walk-in')}</div>
+        ${bill.customer_phone ? `<div class="meta-sub">${escapeHtml(bill.customer_phone)}</div>` : ''}
+      </div>
+      <div class="meta-cell">
+        <div class="meta-label">Payment</div>
+        <div class="meta-value" style="text-transform:capitalize">${escapeHtml(bill.payment_method ?? '')}</div>
+      </div>
+      ${bill.doctor ? `
+      <div class="meta-cell">
+        <div class="meta-label">Doctor</div>
+        <div class="meta-value">${escapeHtml(bill.doctor)}</div>
+      </div>` : `
+      <div class="meta-cell">
+        <div class="meta-label">Items</div>
+        <div class="meta-value">${itemCount} items, ${totalQty} qty</div>
+      </div>`}
+    </div>
 
-  <div class="meta"><span class="label">Bill No.</span><span class="bold">${bill.bill_no}</span></div>
-  <div class="meta"><span class="label">Date</span><span>${format(new Date(bill.bill_date), 'dd/MM/yyyy')}</span></div>
-  ${bill.customer_name ? `<div class="meta"><span class="label">Customer</span><span>${bill.customer_name}</span></div>` : ''}
-  ${bill.customer_phone ? `<div class="meta"><span class="label">Phone</span><span>${bill.customer_phone}</span></div>` : ''}
-  ${bill.doctor ? `<div class="meta"><span class="label">Doctor</span><span>${bill.doctor}</span></div>` : ''}
-  <div class="meta"><span class="label">Payment</span><span style="text-transform:uppercase">${bill.payment_method}</span></div>
+    ${bill.status === 'cancelled' && bill.cancel_reason ? `
+      <div class="side-pad">
+        <div class="cancel-box">
+          <strong>Cancelled${bill.cancelled_at ? ' on ' + format(new Date(bill.cancelled_at), 'dd MMM yyyy, hh:mm a') : ''}:</strong>
+          ${escapeHtml(bill.cancel_reason)}
+        </div>
+      </div>
+    ` : ''}
 
-  <div class="divider"></div>
+    ${bill.note ? `
+      <div class="side-pad">
+        <div class="note"><strong>Note:</strong> ${escapeHtml(bill.note)}</div>
+      </div>
+    ` : ''}
 
-  <table>
-    <thead>
-      <tr>
-        <th>Medicine</th>
-        <th class="right">Qty</th>
-        <th class="right">Rate</th>
-        <th class="right">Amt</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${itemRows}
-    </tbody>
-  </table>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Medicine</th>
+          <th>Batch</th>
+          <th class="right">Qty</th>
+          <th class="right">Price</th>
+          <th class="right">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${itemRows}
+      </tbody>
+    </table>
 
-  <div class="divider"></div>
-
-  <div class="totals">
-    <div class="row"><span class="label">Subtotal</span><span>${fmtINR(bill.subtotal)}</span></div>
-    ${bill.discount_total > 0 ? `<div class="row"><span class="label">Discount</span><span>- ${fmtINR(bill.discount_total)}</span></div>` : ''}
-    ${bill.tax_total > 0 ? `<div class="row"><span class="label">Tax</span><span>+ ${fmtINR(bill.tax_total)}</span></div>` : ''}
-    <div class="row grand"><span>TOTAL</span><span>${fmtINR(bill.total)}</span></div>
-  </div>
-
-  <div class="divider"></div>
-  <div class="footer">
-    ${pharmacy.invoice_footer || 'Thank you for your purchase!'}
-    ${bill.note ? '<br/>Note: ' + bill.note : ''}
+    <div class="totals">
+      <div class="row"><span>Subtotal</span><span>${fmtINR(bill.subtotal)}</span></div>
+      ${bill.discount_total > 0 ? `<div class="row"><span>Discount</span><span style="color:#dc2626">− ${fmtINR(bill.discount_total)}</span></div>` : ''}
+      ${bill.tax_total > 0 ? `<div class="row"><span>Tax</span><span>+ ${fmtINR(bill.tax_total)}</span></div>` : ''}
+      <div class="row grand"><span>Total</span><span class="amt">${fmtINR(bill.total)}</span></div>
+    </div>
   </div>
 
   <script>
@@ -162,7 +203,7 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
   </script>
 </body></html>`
 
-      const win = window.open('', '_blank', 'width=400,height=600')
+      const win = window.open('', '_blank', 'width=900,height=1000')
       if (win) {
         win.document.write(html)
         win.document.close()
@@ -209,4 +250,15 @@ function fmtINR(n: number) {
     lastThree = rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + lastThree
   }
   return `₹${lastThree}.${dec}`
+}
+
+/** Prevent injection when pharmacy/customer fields contain HTML-sensitive characters. */
+function escapeHtml(s: string | null | undefined): string {
+  if (s == null) return ''
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }

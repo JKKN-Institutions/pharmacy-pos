@@ -122,7 +122,7 @@ async function KpiCardsServer() {
 
   const [posBills, invoices, expenses, salary, purchases] = await Promise.all([
     fetchAllRows<{ total: number; bill_date: string }>(() =>
-      supabase.from('pos_bills').select('total, bill_date').order('id')),
+      supabase.from('pos_bills').select('total, bill_date').neq('status', 'cancelled').order('id')),
     fetchAllRows<{ total: number }>(() =>
       supabase.from('invoices').select('total').order('id')),
     fetchAllRows<{ amount: number }>(() =>

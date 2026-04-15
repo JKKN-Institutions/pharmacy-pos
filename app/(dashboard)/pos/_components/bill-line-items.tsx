@@ -21,6 +21,7 @@ import {
 import { format } from 'date-fns'
 import type { BillItem } from './pos-client'
 import { useMedicineSearch, type MedicineResult } from '@/lib/hooks/use-medicine-search'
+import { db } from '@/lib/offline/db'
 import { cn } from '@/lib/utils'
 
 interface TaxRate {
@@ -133,12 +134,14 @@ function BatchDropdown({
   batches,
   onSelect,
   autoFocus,
+  initialValue,
 }: {
   batches: BatchOption[]
   onSelect: (batch: BatchOption) => void
   autoFocus?: boolean
+  initialValue?: string
 }) {
-  const [query, setQuery]              = useState('')
+  const [query, setQuery]              = useState(initialValue ?? '')
   const [open, setOpen]                = useState(false)
   const [dropdownPos, setDropdownPos]  = useState<{ top: number; left: number; width: number } | null>(null)
   const inputRef                       = useRef<HTMLInputElement | null>(null)
@@ -236,6 +239,63 @@ function BatchDropdown({
       />
       {dropdown}
     </div>
+  )
+}
+
+// ── Committed batch cell — allows swapping the batch on an already-added row ─
+// Loads the medicine's batch list from IndexedDB (same source used during sync)
+// and reuses BatchDropdown. On select, propagates all batch-linked fields up.
+function CommittedBatchCell({
+  item,
+  onChange,
+}: {
+  item: BillItem
+  onChange: (updates: Partial<BillItem>) => void
+}) {
+  const [batches, setBatches] = useState<BatchOption[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    db.medicines.get(item.medicine_id).then((m) => {
+      if (cancelled || !m) return
+      const mapped = (m.batches ?? []).map((b) => ({
+        id:            b.id,
+        batch_no:      b.batch_no,
+        expiry_date:   b.expiry_date,
+        sale_price:    Number(b.sale_price),
+        available_qty: Number(b.available_qty),
+      }))
+      // Ensure the currently-selected batch is present even if it's been
+      // exhausted or expired since this row was added — otherwise the user
+      // sees an empty dropdown on a valid committed row.
+      if (!mapped.some((b) => b.id === item.stock_batch_id)) {
+        mapped.push({
+          id:            item.stock_batch_id,
+          batch_no:      item.batch_no,
+          expiry_date:   item.expiry_date,
+          sale_price:    Number(item.sale_price),
+          available_qty: Number(item.available_qty),
+        })
+      }
+      setBatches(mapped)
+    })
+    return () => { cancelled = true }
+  }, [item.medicine_id, item.stock_batch_id, item.batch_no, item.expiry_date, item.sale_price, item.available_qty])
+
+  return (
+    <BatchDropdown
+      batches={batches}
+      initialValue={item.batch_no}
+      onSelect={(b) =>
+        onChange({
+          stock_batch_id: b.id,
+          batch_no:       b.batch_no,
+          expiry_date:    b.expiry_date,
+          available_qty:  Number(b.available_qty),
+          sale_price:     Number(b.sale_price),
+        })
+      }
+    />
   )
 }
 
@@ -338,10 +398,11 @@ export function BillLineItems({ items, onUpdate, onRemove, onAdd, isSyncing }: B
                   <div className="font-medium text-sm">{item.medicine_name}</div>
                 </td>
 
-                <td className="px-3 py-2">
-                  <span className="font-mono text-xs text-muted-foreground bg-muted/60 px-1.5 py-0.5 rounded">
-                    {item.batch_no}
-                  </span>
+                <td className="px-2 py-2">
+                  <CommittedBatchCell
+                    item={item}
+                    onChange={(updates) => onUpdate(item.id, updates)}
+                  />
                 </td>
 
                 <td className="px-3 py-2">

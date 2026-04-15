@@ -55,15 +55,16 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><title>${bill.bill_no}</title>
 <style>
-  @page { size: 80mm auto; margin: 0; }
+  @page { size: 80mm auto; margin: 3mm 2mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Courier New', monospace;
     font-size: 12px;
     color: #000;
-    width: 80mm;
-    padding: 8px 10px;
+    width: 76mm;
+    padding: 2mm 3mm;
     -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .center { text-align: center; }
   .bold { font-weight: 700; }
@@ -87,7 +88,8 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
   .totals .grand { font-size: 14px; font-weight: 700; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
   .footer { font-size: 10px; color: #555; text-align: center; margin-top: 8px; line-height: 1.4; }
   @media print {
-    body { width: 80mm; padding: 4px 6px; }
+    html, body { width: 76mm; }
+    body { padding: 2mm 3mm; }
   }
 </style></head>
 <body>

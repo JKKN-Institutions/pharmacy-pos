@@ -55,14 +55,20 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
       const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><title>${bill.bill_no}</title>
 <style>
+  /* Default: thermal 80mm roll */
   @page { size: 80mm auto; margin: 10mm 2mm 5mm 2mm; }
+  /* A4 fallback (when the user picks A4/Letter in the browser print dialog) */
+  @page :first { margin-top: 25mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #fff; }
   body {
     font-family: 'Courier New', monospace;
     font-size: 12px;
     color: #000;
     width: 76mm;
-    padding: 8mm 3mm 3mm 3mm;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 15mm 3mm 5mm 3mm;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -88,8 +94,13 @@ export function PrintBillButton({ bill, showLabel = false, variant = 'ghost' }: 
   .totals .grand { font-size: 14px; font-weight: 700; border-top: 1px solid #000; padding-top: 4px; margin-top: 4px; }
   .footer { font-size: 10px; color: #555; text-align: center; margin-top: 8px; line-height: 1.4; }
   @media print {
-    html, body { width: 76mm; }
-    body { padding: 8mm 3mm 3mm 3mm; }
+    html, body { width: auto; }
+    body {
+      width: 76mm;
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 15mm 3mm 5mm 3mm;
+    }
   }
 </style></head>
 <body>

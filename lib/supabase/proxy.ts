@@ -60,6 +60,25 @@ export async function updateSession(request: NextRequest) {
   // Redirect unauthenticated users to login and clear stale Supabase cookies
   // so the browser doesn't get stuck in a refresh-token error loop on the next visit.
   if (!user) {
+    // Server Action / RSC requests can't follow a redirect to /login — the client
+    // parser chokes on the HTML response with "An unexpected response was received
+    // from the server." Return a 401 JSON so the client sees a clean error and we
+    // can surface a toast-level re-auth prompt instead of a cryptic render crash.
+    const isServerAction =
+      request.headers.has('next-action') ||
+      request.headers.get('rsc') === '1' ||
+      request.headers.get('next-router-state-tree') !== null
+    if (isServerAction) {
+      const res = new NextResponse(
+        JSON.stringify({ error: 'Session expired. Please sign in again.' }),
+        { status: 401, headers: { 'content-type': 'application/json' } },
+      )
+      request.cookies.getAll()
+        .filter(c => c.name.startsWith('sb-'))
+        .forEach(c => res.cookies.delete(c.name))
+      return res
+    }
+
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     const redirectResponse = NextResponse.redirect(url)

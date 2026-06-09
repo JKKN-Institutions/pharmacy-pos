@@ -1,4 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
+import type { PosBill } from '@/lib/types/database'
 import { PageHeader } from '@/components/ui/page-header'
 import { formatINR } from '@/lib/utils/currency'
 import { ChevronLeft } from 'lucide-react'
@@ -17,18 +19,27 @@ export default async function PosBillReportPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let query = supabase
-    .from('pos_bills')
-    .select('*', { count: 'exact' })
-    .order('bill_date', { ascending: false })
+  // Fetch ALL bills, paginating past PostgREST's 1000-row default cap.
+  // A plain .select() silently returns at most 1000 rows, which made this
+  // report under-count revenue versus the POS/Bill module. fetchAllRows()
+  // loops .range() in 1000-row chunks until the whole result set is pulled.
+  const bills = await fetchAllRows<PosBill>(() => {
+    let q = supabase.from('pos_bills').select('*')
+    if (params.from) q = q.gte('bill_date', params.from)
+    if (params.to) q = q.lte('bill_date', params.to)
+    // order() after the filters; the secondary .order('id') makes the
+    // page boundaries deterministic so no row is skipped or duplicated.
+    return q.order('bill_date', { ascending: false }).order('id')
+  })
 
-  if (params.from) query = query.gte('bill_date', params.from)
-  if (params.to) query = query.lte('bill_date', params.to)
-
-  const { data: bills, count } = await query
-  const billCount = count ?? 0
-  const totalRevenue = (bills ?? []).reduce((s, b) => s + Number(b.total), 0)
-  const avgBillValue = billCount > 0 ? totalRevenue / billCount : 0
+  const billCount = bills.length
+  // Total Revenue mirrors the POS/Bill module: it is *realized* revenue, so
+  // cancelled bills are excluded from the total (they still appear as records
+  // in the table/export below). This makes both screens reconcile exactly.
+  const revenueBills = bills.filter((b) => b.status !== 'cancelled')
+  const cancelledCount = billCount - revenueBills.length
+  const totalRevenue = revenueBills.reduce((s, b) => s + Number(b.total), 0)
+  const avgBillValue = revenueBills.length > 0 ? totalRevenue / revenueBills.length : 0
 
   const exportColumns = [
     { header: 'Bill No',       key: 'bill_no',         width: 16 },
@@ -41,7 +52,7 @@ export default async function PosBillReportPage({
     { header: 'Tax',           key: 'tax_total',        width: 10, align: 'right' as const },
     { header: 'Total (₹)',     key: 'total',            width: 14, align: 'right' as const },
   ]
-  const exportRows = (bills ?? []).map((b) => ({
+  const exportRows = bills.map((b) => ({
     bill_no:          b.bill_no,
     bill_date:        b.bill_date,
     customer_name:    b.customer_name ?? '—',
@@ -84,6 +95,11 @@ export default async function PosBillReportPage({
               Total Revenue
             </p>
             <p className="text-2xl font-bold text-green-600">{formatINR(totalRevenue)}</p>
+            {cancelledCount > 0 && (
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Excludes {cancelledCount} cancelled {cancelledCount === 1 ? 'bill' : 'bills'}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className="rounded-2xl">
@@ -104,7 +120,7 @@ export default async function PosBillReportPage({
         </Card>
       </div>
 
-      <PosBillTable bills={bills ?? []} />
+      <PosBillTable bills={bills} />
     </div>
   )
 }

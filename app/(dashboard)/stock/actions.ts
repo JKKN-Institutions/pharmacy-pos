@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { fetchAllRows } from '@/lib/supabase/queries'
 import type { ParsedStockBatchRow } from '@/lib/utils/parse-stock-batches-excel'
 
 // ─── Write Off ────────────────────────────────────────────────────────────────
@@ -330,6 +331,74 @@ export async function insertStockBatchAction(
   const { error } = await supabase.from('stock_batches').insert(payloads)
   if (error) return { inserted: 0, error: error.message }
   return { inserted: payloads.length }
+}
+
+// ─── Export Live Stock ────────────────────────────────────────────────────────
+
+export type LiveStockExportRow = {
+  medicine_name:  string
+  company:        string
+  batch_no:       string
+  expiry_date:    string
+  purchase_price: number
+  sale_price:     number
+  initial_qty:    number
+  sold_qty:       number
+  available_qty:  number
+}
+
+/**
+ * Fetches ALL live stock batches (active, not expired, available_qty > 0),
+ * paginating past the 1000-row PostgREST cap.
+ *   sortBy 'expiry' → FEFO order (nearest expiry first)
+ *   sortBy 'name'   → alphabetical by medicine name, then nearest expiry
+ */
+export async function fetchLiveStockForExportAction(
+  sortBy: 'expiry' | 'name',
+): Promise<{ rows: LiveStockExportRow[]; error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { rows: [], error: 'Not authenticated' }
+
+  const today = new Date().toISOString().split('T')[0]
+
+  type Raw = Omit<LiveStockExportRow, 'medicine_name' | 'company'> & {
+    medicines: { name: string; company: string | null } | null
+  }
+
+  const raw = await fetchAllRows<Raw>(() =>
+    supabase
+      .from('stock_batches')
+      .select('batch_no, expiry_date, purchase_price, sale_price, initial_qty, sold_qty, available_qty, medicines(name, company)')
+      .eq('status', 'active')
+      .gte('expiry_date', today)
+      .gt('available_qty', 0)
+      .order('expiry_date', { ascending: true })
+      .order('id'),           // secondary sort — deterministic pagination
+  )
+
+  const rows: LiveStockExportRow[] = raw.map((r) => ({
+    medicine_name:  r.medicines?.name?.trim() ?? '',
+    company:        r.medicines?.company ?? '',
+    batch_no:       r.batch_no,
+    expiry_date:    r.expiry_date,
+    purchase_price: Number(r.purchase_price) || 0,
+    sale_price:     Number(r.sale_price) || 0,
+    initial_qty:    Number(r.initial_qty) || 0,
+    sold_qty:       Number(r.sold_qty) || 0,
+    available_qty:  Number(r.available_qty) || 0,
+  }))
+
+  if (sortBy === 'name') {
+    // Stable sort keeps FEFO (expiry asc) order within the same medicine name
+    rows.sort((a, b) =>
+      a.medicine_name.localeCompare(b.medicine_name, 'en', { sensitivity: 'base', numeric: true }),
+    )
+  }
+
+  return { rows }
 }
 
 // ─── Bulk Import — Step 3: Revalidate cache ───────────────────────────────────

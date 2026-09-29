@@ -4,6 +4,7 @@ import { stockColumns } from './columns'
 import { PageHeader } from '@/components/ui/page-header'
 import { StockDataTable } from '@/components/stock/stock-data-table'
 import { StockBulkImportButton } from '@/components/stock/stock-bulk-import-button'
+import { StockExportButton } from '@/components/stock/stock-export-button'
 import type { StockWithMedicine } from './columns'
 
 const SORTABLE_DB_COLUMNS = [
@@ -87,6 +88,7 @@ export default async function StockPage({
     <div className="space-y-6">
       <div className="bg-white dark:bg-card rounded-2xl border shadow-sm p-5 sm:p-6 space-y-5">
         <PageHeader title={title} description={description}>
+          <StockExportButton />
           <StockBulkImportButton />
         </PageHeader>
 

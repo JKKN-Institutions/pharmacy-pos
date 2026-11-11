@@ -43,3 +43,6 @@ next-env.d.ts
 
 # MCP client config can hold access tokens; never commit it
 .mcp.json
+
+# Local credential files: never commit (security clean-up 2026-11-11)
+env.local
